@@ -3,8 +3,8 @@
  * Google Apps Script + Google Sheets
  * חי אפליקציות
  *
- * התקנה: מדביקים את כל הקוד הזה ב-Apps Script של גיליון חדש,
- * ופורסים כ-Web app (Execute as: Me, Who has access: Anyone).
+ * התקנה: פותחים script.google.com/create, מדביקים את כל הקוד הזה,
+ * (הגיליון עם הנתונים נוצר לבד בדרייב), ופורסים כ-Web app (Execute as: Me, Who has access: Anyone).
  */
 
 const APP = 'העוגות של החיים';
@@ -36,8 +36,19 @@ function out_(o) {
 }
 
 /* ---------- sheets ---------- */
+function ss_() {
+  let a = null;
+  try { a = SpreadsheetApp.getActive(); } catch (e) {}
+  if (a) return a;
+  const p = PropertiesService.getScriptProperties();
+  const id = p.getProperty('SS');
+  if (id) { try { return SpreadsheetApp.openById(id); } catch (e) {} }
+  const s = SpreadsheetApp.create(APP + ' - נתונים');
+  p.setProperty('SS', s.getId());
+  return s;
+}
 function sheet_(n) {
-  const ss = SpreadsheetApp.getActive();
+  const ss = ss_();
   let s = ss.getSheetByName(n);
   if (!s) { s = ss.insertSheet(n); s.appendRow(HEAD[n]); s.setFrozenRows(1); }
   return s;
