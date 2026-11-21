@@ -555,7 +555,7 @@ document.addEventListener('click',e=>{if(e.target.closest('[data-stopalarm]'))st
 $('#tchip').onclick=()=>timerPanel();
 
 /* ---------- family sharing ---------- */
-const DEFAULT_SERVER='';
+const DEFAULT_SERVER='https://script.google.com/macros/s/AKfycbwNpuCN3HoElO5wnhya-m3h7ANhsSqbpX1-JNgygeUZKqRB_mtezbZdH9FWDf7vD3qn/exec';
 const inClaude=()=>!!window.claude;
 const server=()=>settings.server||DEFAULT_SERVER;
 const famOn=()=>!!(settings.fam&&settings.fam.memberId&&server());
