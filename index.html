@@ -77,6 +77,13 @@ details.orig summary{padding:14px 18px;font-weight:700;cursor:pointer;color:var(
 .hero .band.pic h2{position:relative;text-shadow:0 2px 10px #000a}
 .ing.opt.have .t{text-decoration:none;color:inherit}
 .joinbar{display:flex;align-items:center;gap:10px;background:var(--card);border:2px solid var(--brand);border-radius:18px;padding:12px 14px;margin-bottom:14px}.joinbar>div{flex:1;display:grid}.joinbar small{color:var(--soft);font-size:14px}.joinbar .x{font-size:24px;color:var(--soft);width:32px}
+.socbar{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.like{min-height:46px;padding:8px 18px;border-radius:99px;border:2px solid var(--line);background:var(--card);font-size:18px}
+.like.on{border-color:#e0567a;background:#fde7ee;color:#8e1531}
+.cmt{border-bottom:1px dashed var(--line);padding:10px 0;position:relative}.cmt p{margin:4px 0 0;white-space:pre-wrap}
+.cdel{position:absolute;top:10px;left:0;color:var(--soft);font-size:14px}
+.rc .soc{display:block;font-size:14px;margin-bottom:2px}
+.tagc{cursor:pointer}.tagc:has(input:checked){background:var(--brand);border-color:var(--brand);color:#fff}
 .pendbar{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;background:var(--sun);color:#2a1418;font:700 18px Heebo;padding:14px 16px;border-radius:16px;margin-bottom:14px;text-align:start}
 .rc .pend{display:inline-block;background:var(--sun);color:#2a1418;font:700 13px Heebo;padding:2px 8px;border-radius:99px;margin-bottom:4px}
 .rc .by{display:block;color:var(--soft);font-size:13px}
@@ -201,7 +208,14 @@ const PICS=Object.fromEntries('s01 s02 s03 s04 s05 s06 s07 s08 s09 s10 s11 s12 s
 const CATBG={'עוגות':'img/bg-cakes.jpg','עוגיות':'img/bg-cookies.jpg','מחבת וטיגון':'img/bg-pan.jpg','מנות עיקריות':'img/bg-meals.jpg','קינוחים':'img/bg-main.jpg'};
 const DEFBG=['img/bg-main.jpg','img/bg-cakes.jpg','img/bg-cookies.jpg','img/bg-pan.jpg'];
 const picOf=r=>r.dish||r.pic||PICS[r.id]||'';
-const theme=c=>THEME[c]||THEME['אחר'];
+const BASE_CATS=CATS.slice();
+const PAL=['#b3203f','#c75a12','#7b3fa0','#1e7a5a','#2f6f9f','#c28a00','#26408b','#9a5b2e','#3d8b3d'];
+const theme=c=>{if(THEME[c])return THEME[c];let h=0;for(const ch of String(c))h=(h*31+ch.charCodeAt(0))>>>0;
+  const ic=/בישול|סיר|תבשיל|בשר|עוף|דג/.test(c)?'pot':/טיגון|מחבת|מטוגן/.test(c)?'pan':/לחם|מאפ|בצק|חל/.test(c)?'bread':/עוגי/.test(c)?'cookie':/עוג/.test(c)?'cake':/קינוח|גלידה|מוס/.test(c)?'cup':/סלט|ירק|טבעונ/.test(c)?'leaf':/מרק/.test(c)?'bowl':/חג|שבת/.test(c)?'candle':'whisk';
+  return [PAL[h%PAL.length],ic]};
+function customCats(){return famOn()?(settings.fam.cats||[]):(settings.customCats||[])}
+function refreshCats(){const all=[...BASE_CATS.filter(c=>c!=='אחר'),...customCats().filter(c=>!BASE_CATS.includes(c)),'אחר'];CATS.length=0;CATS.push(...all);refreshPrompts()}
+const inCat=(r,c)=>r.category===c||(r.tags||[]).includes(c);
 const art=(c,cls='ic')=>`<svg class="${cls}" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">${IC[theme(c)[1]]}</svg>`;
 const ICON={check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M5 12l5 5 9-10"/></svg>',
 cam:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>',
@@ -234,15 +248,16 @@ async function shrink(file,max=1600,q=.85){const i=await loadImg(file);const k=M
 const dataToBlob=d=>{const [h,b]=d.split(',');const bin=atob(b);const a=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)a[i]=bin.charCodeAt(i);return new Blob([a],{type:h.match(/:(.*?);/)[1]})};
 
 /* ---------- AI ---------- */
-const PROMPT=`אתה מומחה לפענוח מתכונים. בתמונות מצורף מתכון (מודפס או בכתב יד, ייתכן בכמה עמודים — אחד אותם למתכון אחד).
+let PROMPT0=`אתה מומחה לפענוח מתכונים. בתמונות מצורף מתכון (מודפס או בכתב יד, ייתכן בכמה עמודים — אחד אותם למתכון אחד).
 קרא את כל הטקסט בעיון ופרק אותו. החזר JSON בלבד, בעברית, במבנה הזה בדיוק:
-{"title":"שם המתכון","category":"אחת מ: ${CATS.join(', ')}","servings":"כמות/מספר מנות או תבנית, אם כתוב","time":"זמן הכנה כולל אם כתוב","ovenTemp":"חום תנור, למשל 180°","bakeTime":"זמן אפייה, למשל 40 דקות","intro":"משפט קצר אם יש הקדמה",
+{"title":"שם המתכון","category":"אחת מ: __CATS__","servings":"כמות/מספר מנות או תבנית, אם כתוב","time":"זמן הכנה כולל אם כתוב","ovenTemp":"חום תנור, למשל 180°","bakeTime":"זמן אפייה, למשל 40 דקות","intro":"משפט קצר אם יש הקדמה",
 "measure":"באיזו כוס מודדים אם כתוב (כוס שתייה קרה / חמה / כוס מדידה)",
 "ingredients":[{"group":"שם הקבוצה (לבצק, למילוי, לסירופ, לציפוי...) או ריק אם אין","items":["כמות + מצרך, שורה לכל מצרך"]}],
 "steps":[{"group":"שם השלב (הכנת הבצק...) או ריק","items":["הוראה אחת בכל פריט, בלשון ברורה"]}],
 "finish":[{"group":"למשל: סירופ / ציפוי / מילוי / קישוט / הגשה","items":["הוראות של מה שעושים בסוף"]}],
 "tips":["נקודות חשובות לשים לב אליהן, אזהרות, טיפים"]}
 כללים: כל המצרכים (כולל של סירופ/ציפוי/מילוי) נכנסים ל-ingredients בקבוצות נפרדות; ב-finish רק ההוראות של מה שעושים בסוף. מילה שמחוקה בקו (בעט או עיפרון) — אל תכלול. תיקון בכתב יד — העדף אותו. תקן שגיאות כתיב ברורות. אל תמציא דבר שלא כתוב; שדה שאין עליו מידע — מחרוזת ריקה או מערך ריק. אם יש בתמונה צילום של המאכל ולא טקסט — התעלם ממנו.`;
+let PROMPT='';function refreshPrompts(){PROMPT=PROMPT0.replace('__CATS__',CATS.join(', '));PROMPT_T=PROMPT_T0.replace('__CATS__',CATS.join(', '))}
 async function initSample(){try{if(!window.claude||!window.claude.use)return;const s=await window.claude.use('sample');if(!s)return;sampleFn=s;try{const l=await s.limits();sampleImg=!!(l&&l.images)}catch(e){sampleImg=true}}catch(e){}}
 function parseJSON(t){if(typeof t!=='string')return t;const a=t.indexOf('{'),b=t.lastIndexOf('}');return JSON.parse(t.slice(a,b+1))}
 async function aiParse(images){
@@ -261,7 +276,7 @@ async function aiParse(images){
   }
   throw new Error('NOAI');
 }
-const PROMPT_T=PROMPT.replace('בתמונות מצורף מתכון (מודפס או בכתב יד, ייתכן בכמה עמודים — אחד אותם למתכון אחד).','בטקסט שלמטה (שחולץ מקובץ) יש מתכון אחד או יותר. שורות עשויות להיות שבורות באמצע משפט — חבר אותן.')
+let PROMPT_T='';const PROMPT_T0=PROMPT0.replace('בתמונות מצורף מתכון (מודפס או בכתב יד, ייתכן בכמה עמודים — אחד אותם למתכון אחד).','בטקסט שלמטה (שחולץ מקובץ) יש מתכון אחד או יותר. שורות עשויות להיות שבורות באמצע משפט — חבר אותן.')
   .replace('החזר JSON בלבד, בעברית, במבנה הזה בדיוק:','החזר JSON בלבד, בעברית: {"recipes":[ ...מתכון לכל מתכון בטקסט... ]} כשכל מתכון במבנה הזה:')+'\n\nהטקסט:\n';
 async function aiText(text){
   const prompt=PROMPT_T+text.slice(0,30000);let j;
@@ -328,7 +343,7 @@ function localParse(text){
   if(m=all.match(/(\d{3})\s*°|°\s*(\d{3})|(\d{3})\s*מעלות/)){r.ovenTemp=(m[1]||m[2]||m[3])+'°';const after=all.slice(m.index);const t=after.match(/(\d+\s*[-–]\s*\d+|\d+)\s*דקות/);if(t)r.bakeTime=t[1].replace(/\s/g,'')+' דקות'}
   r.category=guessCat(r.title);r.ingredients=r.ingredients.filter(g=>g.items.length);r.steps=r.steps.filter(g=>g.items.length);if(!r.title)r.title='מתכון ללא שם';return r}
 const clean=g=>(Array.isArray(g)?g:[]).map(x=>typeof x==='string'?{group:'',items:[x]}:{group:String(x.group||''),items:(x.items||[]).map(String).filter(Boolean)}).filter(x=>x.items.length);
-function normalize(j,base={}){return {...base,title:j.title||base.title||'מתכון ללא שם',category:CATS.includes(j.category)?j.category:(base.category||'אחר'),servings:j.servings||'',time:j.time||'',measure:j.measure||'',ovenTemp:j.ovenTemp||'',bakeTime:j.bakeTime||'',intro:j.intro||'',ingredients:clean(j.ingredients),steps:clean(j.steps),finish:clean(j.finish),tips:(j.tips||[]).map(String).filter(Boolean),have:{},done:{}}}
+function normalize(j,base={}){return {...base,title:j.title||base.title||'מתכון ללא שם',category:CATS.includes(j.category)?j.category:(base.category||'אחר'),tags:base.tags||[],servings:j.servings||'',time:j.time||'',measure:j.measure||'',ovenTemp:j.ovenTemp||'',bakeTime:j.bakeTime||'',intro:j.intro||'',ingredients:clean(j.ingredients),steps:clean(j.steps),finish:clean(j.finish),tips:(j.tips||[]).map(String).filter(Boolean),have:{},done:{}}}
 
 /* ---------- text <-> groups (editor) ---------- */
 const toText=gs=>(gs||[]).map(g=>(g.group?'# '+g.group+'\n':'')+g.items.join('\n')).join('\n');
@@ -359,7 +374,7 @@ function card(r){const [c]=theme(r.category),photo=settings.cardStyle==='photo'?
   return `<button class="rc" data-open="${r.id}" style="--c:${c}">${photo?`<div class="ph"><img src="${photo}" alt="" loading="lazy"></div>`:
   pic?`<div class="ph pic"><img src="${pic}" alt="" loading="lazy"><span class="ttl">${esc(r.title)}</span>${r.ovenTemp?`<span class="tmp">${esc(r.ovenTemp)}</span>`:''}</div>`:
   `<div class="ph art">${art(r.category)}<span class="ttl">${esc(r.title)}</span>${r.ovenTemp?`<span class="tmp">${esc(r.ovenTemp)}</span>`:''}</div>`}
-  <div class="tx">${photo?`<h3>${esc(r.title)}</h3>`:''}${r.fam&&r.fam.status!=='approved'?`<span class="pend">${r.fam.status==='pending'?'⏳ ממתין לאישור':'✖ נדחה'}</span>`:''}${r.fam&&r.fam.byName&&!mine(r)?`<small class="by">מאת ${esc(r.fam.byName)}</small>`:''}<small class="pv">${esc(pv)}</small><small>${esc(r.category)}${ni?' · '+ni+' מצרכים':''}${r.bakeTime?' · '+esc(r.bakeTime):''}</small></div></button>`}
+  <div class="tx">${photo?`<h3>${esc(r.title)}</h3>`:''}${r.fam&&r.fam.status!=='approved'?`<span class="pend">${r.fam.status==='pending'?'⏳ ממתין לאישור':'✖ נדחה'}</span>`:''}${r.fam&&r.fam.byName&&!mine(r)?`<small class="by">מאת ${esc(r.fam.byName)}</small>`:''}${soc(r).likes||soc(r).comments.length?`<small class="soc">${soc(r).likes?`❤️ ${soc(r).likes}`:''} ${soc(r).comments.length?`💬 ${soc(r).comments.length}`:''}</small>`:''}<small class="pv">${esc(pv)}</small><small>${esc(r.category)}${ni?' · '+ni+' מצרכים':''}${r.bakeTime?' · '+esc(r.bakeTime):''}</small></div></button>`}
 function pickBg(){const b=(settings.bgs||[]).length?settings.bgs:DEFBG;if(window._bgi==null)window._bgi=Math.floor(Math.random()*b.length);return b[window._bgi%b.length]}
 function showSplash(){if(settings.splash===false)return;const el=$('#splash'),bg=pickBg();
   el.innerHTML=`<div class="sp-bg" ${bg?`style="background-image:url('${bg}')"`:''}>${bg?'':`<div class="sp-art">${['עוגות','עוגיות','מחבת וטיגון','קינוחים','מנות עיקריות'].map(c=>art(c)).join('')}</div>`}</div><div class="sp-in"><img class="sp-logo" src="img/logo.png" alt=""><h1>${esc(settings.name)}</h1><p>${recipes.length} מתכונים מחכים לך</p><button class="sp-go">כניסה</button><small>חי אפליקציות</small></div>`;
@@ -367,8 +382,8 @@ function showSplash(){if(settings.splash===false)return;const el=$('#splash'),bg
 function rBgList(){const b=settings.bgs||[];return b.length?`<div class="thumbs" style="justify-content:flex-start">${b.map((x,i)=>`<div><img src="${x}" alt=""><button type="button" data-rmbg="${i}" aria-label="הסר">×</button></div>`).join('')}</div>`:'<p class="note">כרגע מוצגים הרקעים המובנים של האפליקציה. תמונה שתוסיף כאן תחליף אותם.</p>'}
 function rHome(){
   const q=$('#q').value.trim();
-  const used=['הכל',...CATS.filter(c=>recipes.some(r=>r.category===c))];
-  let list=view.cat==='__pending'?recipes.filter(r=>r.fam&&r.fam.status==='pending'):recipes.filter(r=>(view.cat==='הכל'||r.category===view.cat)&&!(r.fam&&r.fam.status==='rejected'&&!mine(r)));
+  const used=['הכל',...CATS.filter(c=>recipes.some(r=>inCat(r,c)))];
+  let list=view.cat==='__pending'?recipes.filter(r=>r.fam&&r.fam.status==='pending'):recipes.filter(r=>(view.cat==='הכל'||inCat(r,view.cat))&&!(r.fam&&r.fam.status==='rejected'&&!mine(r)));
   if(q)list=list.filter(r=>(r.title+' '+r.ingredients.flatMap(g=>g.items).join(' ')).includes(q));
   const pend=famOn()&&settings.fam.role==='admin'?recipes.filter(r=>r.fam&&r.fam.status==='pending').length:0;
   const bg=view.cat!=='הכל'&&CATBG[view.cat]&&!(settings.bgs||[]).length?CATBG[view.cat]:pickBg();
@@ -383,9 +398,9 @@ function rRecipe(){
   const k=view.k||1,allIng=r.ingredients.flatMap((g,gi)=>g.items.map((t,i)=>({t,key:gi+'_'+i})));
   const haveN=allIng.filter(x=>r.have[x.key]).length,miss=allIng.filter(x=>!r.have[x.key]);
   const stepsN=r.steps.reduce((a,g)=>a+g.items.length,0);let n=0;
-  main.innerHTML=`<button class="back" data-home>${ICON.back} כל המתכונים</button>${famBar(r)}
+  main.innerHTML=`<button class="back" data-home>${ICON.back} כל המתכונים</button>${famBar(r)}${socialBar(r)}
   <div class="hero ${view.cook?'cook':''}" style="--c:${theme(r.category)[0]}">${picOf(r)?`<div class="band pic" style="background-image:url('${picOf(r)}')" data-zoom="${picOf(r)}"><h2>${esc(r.title)}</h2></div><div class="tx">`:`<div class="band">${art(r.category,'bic')}<h2>${esc(r.title)}</h2></div><div class="tx">`}${r.intro?`<p style="margin:8px 0 0">${esc(r.intro)}</p>`:''}
-  <div class="meta"><span class="badge">${esc(r.category)}</span>${r.ovenTemp?`<span class="badge oven">תנור ${esc(r.ovenTemp)}</span>`:''}${r.bakeTime?`<span class="badge oven">אפייה ${esc(r.bakeTime)}</span>`:''}${r.time?`<span class="badge">הכנה ${esc(r.time)}</span>`:''}${r.servings?`<span class="badge">${esc(r.servings)}</span>`:''}${r.measure?`<span class="badge cup">מודדים ב${esc(r.measure)}</span>`:''}</div></div></div>
+  <div class="meta"><span class="badge">${esc(r.category)}</span>${(r.tags||[]).map(t=>`<span class="badge">${esc(t)}</span>`).join('')}${r.ovenTemp?`<span class="badge oven">תנור ${esc(r.ovenTemp)}</span>`:''}${r.bakeTime?`<span class="badge oven">אפייה ${esc(r.bakeTime)}</span>`:''}${r.time?`<span class="badge">הכנה ${esc(r.time)}</span>`:''}${r.servings?`<span class="badge">${esc(r.servings)}</span>`:''}${r.measure?`<span class="badge cup">מודדים ב${esc(r.measure)}</span>`:''}</div></div></div>
   <div class="tools">${bakeMin(r)?`<button class="btn ok" data-rtimer="${bakeMin(r)}">⏲ טיימר אפייה ${bakeMin(r)} דק'</button>`:`<button class="btn ok" data-rtimer="0">⏲ טיימר</button>`}<button class="btn pri" data-cook>${view.cook?'יציאה ממצב בישול':'מצב בישול (מסך דולק)'}</button>
   <select class="btn" id="mult" aria-label="הגדלת כמויות">${[[.5,'חצי כמות'],[1,'כמות רגילה'],[1.5,'פי 1.5'],[2,'כמות כפולה'],[3,'פי 3']].map(([v,l])=>`<option value="${v}" ${v===k?'selected':''}>${l}</option>`).join('')}</select>
   ${canEdit(r)?`<button class="btn" data-dish>${ICON.cam} ${picOf(r)?'החלפת תמונה':'הוסף תמונת מאכל'}</button>
@@ -401,6 +416,7 @@ function rRecipe(){
   ${r.tips.length?sec('s3','נקודות חשובות','',r.tips.map(t=>`<div class="tip"><b>!</b><span>${esc(t)}</span></div>`).join('')):''}
   ${r.finish.length?sec('s4','בסוף: סירופ, ציפוי, מילוי והגשה','',r.finish.map(g=>(g.group?`<div class="grp">${esc(g.group)}</div>`:'')+g.items.map(t=>`<div class="tip"><b style="color:#7b3fa0">•</b><span>${esc(t)}</span></div>`).join('')).join('')):''}
   </div>
+  ${commentsSec(r)}
   ${r.scans?.length?`<details class="sec orig"><summary>הצגת הצילום המקורי</summary><div class="in"><div class="scans">${r.scans.map(s=>`<img src="${s}" alt="צילום המתכון" data-zoom="${s}">`).join('')}</div></div></details>`:''}`;
   $('#mult').onchange=e=>{view.k=parseFloat(e.target.value);rRecipe()};
 }
@@ -442,6 +458,7 @@ function rEdit(){
   <div class="two"><label>חום תנור<input type="text" name="ovenTemp" value="${esc(r.ovenTemp)}" placeholder="180°"></label>
   <label>זמן אפייה<input type="text" name="bakeTime" value="${esc(r.bakeTime)}" placeholder="40 דקות"></label>
   <label>זמן הכנה<input type="text" name="time" value="${esc(r.time)}"></label></div>
+  <div><b style="font-size:17px">קטגוריות נוספות</b> <small class="note">(לא חובה — למשל "מתכונים מהירים")</small><div class="chips" style="flex-wrap:wrap;margin-top:6px">${CATS.filter(c=>c!=='אחר').map(c=>`<label class="chip tagc"><input type="checkbox" name="tags" value="${esc(c)}" ${(r.tags||[]).includes(c)?'checked':''} hidden><span>${esc(c)}</span></label>`).join('')}</div></div>
   <label>הקדמה קצרה<input type="text" name="intro" value="${esc(r.intro)}"></label>
   <label>באיזו כוס מודדים<input type="text" name="measure" value="${esc(r.measure||'')}" placeholder="כוס שתייה קרה / חמה / כוס מדידה"></label>
   <label>מצרכים <small>שורה לכל מצרך. לכותרת קבוצה כתוב # בהתחלה, למשל: # לבצק</small><textarea name="ingredients">${esc(toText(r.ingredients))}</textarea></label>
@@ -452,7 +469,7 @@ function rEdit(){
   ${view.draft?'':`<button class="btn" type="button" data-rescan>${ICON.cam} פענוח מחדש מתמונות</button><button class="btn" type="button" data-del style="color:var(--brand2)">מחיקת המתכון</button>`}</div></form>`;
   $('#ef').onsubmit=e=>{e.preventDefault();const f=new FormData(e.target);
     const n={...r,title:f.get('title').trim()||'מתכון ללא שם',category:f.get('category'),servings:f.get('servings'),ovenTemp:f.get('ovenTemp'),bakeTime:f.get('bakeTime'),time:f.get('time'),intro:f.get('intro'),measure:f.get('measure'),
-    ingredients:fromText(f.get('ingredients')),steps:fromText(f.get('steps')),finish:fromText(f.get('finish')),tips:f.get('tips').split('\n').map(s=>s.trim()).filter(Boolean),have:{},done:{}};
+    tags:f.getAll('tags').filter(t=>t!==f.get('category')),ingredients:fromText(f.get('ingredients')),steps:fromText(f.get('steps')),finish:fromText(f.get('finish')),tips:f.get('tips').split('\n').map(s=>s.trim()).filter(Boolean),have:{},done:{}};
     delete n.sample;if(view.draft)recipes.unshift(n);else recipes=recipes.map(x=>x.id===r.id?n:x);saveAll();toast('נשמר');pushRecipe(n);go({v:'recipe',id:n.id,draft:null,k:1})};
 }
 
@@ -470,6 +487,7 @@ function rSettings(){
   const A=alertCfg();
   main.innerHTML=`<button class="back" data-home>${ICON.back} חזרה</button><h2 style="font-size:30px;margin-bottom:14px">הגדרות</h2>
   ${famSection()}
+  ${catsSection()}
   ${sec('s1','שיתוף האפליקציה','',`<p class="note">שלחו לחברים ולמשפחה קישור לאפליקציה.</p><div class="tools"><button type="button" class="btn ok" data-shareapp>${ICON.share} שיתוף האפליקציה</button></div>`)}
   ${sec('s3','טיימר — איך להתריע','',`<p class="note">כשהטיימר מסתיים:</p>${[['vib','רטט'],['sound','צליל'],['full','הודעה על כל המסך'],['top','הודעה קטנה למעלה']].map(([k,l])=>`<button type="button" class="ing opt ${A[k]?'have':''}" data-alert="${k}"><span class="box">${A[k]?ICON.check:''}</span><span class="t">${l}</span></button>`).join('')}<div class="tools" style="margin-top:10px"><button type="button" class="btn" data-testalarm>ניסיון התראה</button>${'Notification' in window&&!window.claude?`<button type="button" class="btn" data-notif>${typeof Notification!=='undefined'&&Notification.permission==='granted'?'התראות מערכת מופעלות ✓':'הפעלת התראות מערכת'}</button>`:''}</div><p class="note">רטט עובד באנדרואיד (באייפון לא). כדי שהטיימר יצלצל בזמן, השאירו את האפליקציה פתוחה — המסך יישאר דלוק בזמן שטיימר רץ.</p>`)}
   <form class="f" id="stf">
@@ -576,8 +594,8 @@ async function syncFam(quiet=true){if(!famOn()||syncing)return;syncing=true;
       if(s.deleted||(s.status==='rejected'&&s.by!==settings.fam.memberId)||!s.data){if(i>=0){recipes.splice(i,1);ch++}return}
       const old=i>=0?recipes[i]:null;const r={...s.data,id:s.id,have:old?.have||{},done:old?.done||{},fam:{status:s.status,by:s.by,byName:s.byName}};
       if(i>=0)recipes[i]=r;else recipes.unshift(r);ch++});
-    settings.fam.since=j.now;settings.fam.pending=j.pending||0;settings.fam.familyName=j.familyName;settings.fam.role=j.role;saveSet();
-    if(ch){saveAll();if(view.v==='home'||view.v==='recipe'){const y=scrollY;render();scrollTo(0,y)}}
+    settings.fam.since=j.now;if(j.social){social=j.social;dbSet('social',social)}if(j.cats){settings.fam.cats=j.cats;refreshCats()}settings.fam.pending=j.pending||0;settings.fam.familyName=j.familyName;settings.fam.role=j.role;saveSet();
+    if(ch||j.social){if(ch)saveAll();if(view.v==='home'||view.v==='recipe'){const y=scrollY;render();scrollTo(0,y)}}
     if(!quiet)toast(ch?`עודכנו ${ch} מתכונים`:'הכל מעודכן')}
   catch(e){if(!quiet)toast(e.message)}finally{syncing=false}}
 setInterval(()=>{if(!document.hidden)syncFam()},60000);
@@ -622,6 +640,30 @@ function famSection(){const f=settings.fam;
   return sec('s1','משפחה — '+esc(f.familyName||''),f.role==='admin'?'מנהלת':'',`<p style="margin:4px 0">מחובר/ת בתור <b>${esc(f.name||'')}</b>. קוד המשפחה: <b dir="ltr">${f.code}</b></p>
    <div class="tools"><button type="button" class="btn ok" data-faminvite>${ICON.wa} הזמנת בני משפחה</button><button type="button" class="btn" data-famsync>סנכרון עכשיו</button>${f.role==='admin'?`<button type="button" class="btn" data-fammembers>בני המשפחה</button><button type="button" class="btn" data-famupload>העלאת המתכונים שבטלפון למשפחה</button>`:''}<button type="button" class="btn" data-famleave style="color:var(--brand2)">יציאה מהמשפחה</button></div>${adv}`)}
 
+/* ---------- likes & comments ---------- */
+let social={};
+const soc=r=>social[r.id]||{likes:0,mine:false,likers:[],comments:[]};
+const social_ok=r=>famOn()&&r.fam&&r.fam.status==='approved';
+function socialBar(r){if(!social_ok(r))return '';const s=soc(r);
+  return `<div class="socbar"><button class="like ${s.mine?'on':''}" data-like>${s.mine?'❤️':'🤍'} <b>${s.likes||''}</b> אהבתי</button><button class="btn" data-gocomments>💬 ${s.comments.length||''} תגובות</button>${s.likers.length?`<small class="note">${esc(s.likers.slice(0,4).join(', '))}${s.likers.length>4?' ועוד '+(s.likers.length-4):''} אהבו</small>`:''}</div>`}
+const ago=ts=>{const m=Math.round((Date.now()-ts)/60000);return m<1?'עכשיו':m<60?`לפני ${m} דק'`:m<1440?`לפני ${Math.round(m/60)} שע'`:new Date(ts).toLocaleDateString('he-IL')};
+function commentsSec(r){if(!social_ok(r))return '';const s=soc(r);
+  return `<section class="sec" id="comments"><h3 style="background:#2f6f9f">💬 תגובות${s.comments.length?`<span>${s.comments.length}</span>`:''}</h3><div class="in">
+  ${s.comments.length?s.comments.map(c=>`<div class="cmt"><div><b>${esc(c.name)}</b> <small class="note">${ago(c.ts)}</small></div><p>${esc(c.text)}</p>${c.mine||settings.fam.role==='admin'?`<button class="cdel" data-delc="${c.cid}">מחיקה</button>`:''}</div>`).join(''):'<p class="note">עוד אין תגובות. הכינו? ספרו איך יצא!</p>'}
+  <form id="cf" class="f" style="margin-top:10px"><textarea id="ct" placeholder="כתבו תגובה... (למשל: יצא מעולה! הוספתי קצת קינמון)" style="min-height:80px"></textarea><button class="btn pri" style="justify-self:start">שליחה</button></form></div></section>`}
+async function socialAct(action,data,optimistic){if(optimistic)optimistic();const y=scrollY;rRecipe();scrollTo(0,y);
+  try{await api(action,data);await syncFam()}catch(e){toast(e.message);await syncFam()}}
+document.addEventListener('submit',e=>{if(e.target.id!=='cf')return;e.preventDefault();const t=$('#ct').value.trim();if(!t)return;const r=recipes.find(x=>x.id===view.id);
+  socialAct('comment',{id:r.id,text:t},()=>{const s=social[r.id]=soc(r);s.comments=[...s.comments,{cid:'tmp',name:settings.fam.name,text:t,ts:Date.now(),mine:true}]})});
+
+/* ---------- categories management ---------- */
+const canCats=()=>!famOn()||settings.fam.role==='admin';
+function catsSection(){if(!canCats())return '';const cc=customCats();
+  return sec('s4','קטגוריות','',`<p class="note">הקטגוריות הקבועות: ${BASE_CATS.join(' · ')}</p><p style="margin:8px 0 4px"><b>קטגוריות שהוספתם:</b></p>
+  ${cc.length?`<div class="chips" style="flex-wrap:wrap">${cc.map((c,i)=>`<span class="chip">${esc(c)} <button type="button" data-delcat="${i}" aria-label="מחיקה" style="color:var(--brand2);font-weight:700;margin-inline-start:4px">×</button></span>`).join('')}</div>`:'<p class="note">עוד אין</p>'}
+  <div class="tools" style="margin-top:8px"><input type="text" id="newcat" placeholder="למשל: בישול, טיגון, מתכונים מהירים" style="flex:1;min-width:180px"><button type="button" class="btn pri" data-addcat>הוספה</button></div>${famOn()?'<p class="note">הקטגוריות משותפות לכל המשפחה.</p>':''}`)}
+async function saveCats(list){if(famOn()){try{const j=await api('setCats',{cats:list});settings.fam.cats=j.cats}catch(e){toast(e.message);return}}else settings.customCats=list;saveSet();refreshCats();rSettings();toast('נשמר')}
+
 /* ---------- events ---------- */
 document.addEventListener('click',async e=>{
   const t=e.target.closest('button,[data-zoom]');if(!t)return;const d=t.dataset;
@@ -657,6 +699,11 @@ document.addEventListener('click',async e=>{
   else if('notif' in d){try{Notification.requestPermission().then(()=>rSettings())}catch(e){}}
   else if('shareapp' in d)shareApp();
   else if('hidejoin' in d){settings.hideJoin=true;saveSet();rHome()}
+  else if('like' in d){const r=recipes.find(x=>x.id===view.id);socialAct('like',{id:r.id},()=>{const s=social[r.id]=soc(r);s.mine=!s.mine;s.likes+=s.mine?1:-1;s.likers=s.mine?[settings.fam.name,...s.likers]:s.likers.filter(n=>n!==settings.fam.name)})}
+  else if('gocomments' in d){document.getElementById('comments')?.scrollIntoView({behavior:'smooth'});setTimeout(()=>$('#ct')?.focus(),400)}
+  else if(d.delc){if(await ask('למחוק את התגובה?','מחיקה')){const r=recipes.find(x=>x.id===view.id);socialAct('delComment',{cid:d.delc},()=>{const s=soc(r);s.comments=s.comments.filter(c=>c.cid!==d.delc)})}}
+  else if('addcat' in d){const v=$('#newcat').value.trim().slice(0,30);if(!v)return;if(CATS.includes(v)){toast('הקטגוריה כבר קיימת');return}saveCats([...customCats(),v])}
+  else if(d.delcat!==undefined){const cc=customCats();if(await ask(`למחוק את הקטגוריה "${cc[+d.delcat]}"? המתכונים עצמם לא יימחקו.`,'מחיקה'))saveCats(cc.filter((_,i)=>i!==+d.delcat))}
   else if(d.fam)famAct(d.fam);
   else if('faminvite' in d)famInvite();
   else if('famsync' in d)syncFam(false);
@@ -774,6 +821,7 @@ const SEED=[
   const s=await dbGet('settings');if(s)settings={...settings,...s};if(settings.name==='המתכונים שלי')settings.name='העוגות של החיים';
   const r=await dbGet('recipes');recipes=Array.isArray(r)?r:[];
   if((settings.seedV||0)<1){recipes=recipes.filter(x=>x.id!=='sample1');const ids=new Set(recipes.map(x=>x.id));recipes=[...recipes,...SEED.filter(x=>!ids.has(x.id))];settings.seedV=1;saveSet();saveAll()}
+  try{social=(await dbGet('social'))||{}}catch(e){}refreshCats();
   setTitle();go({v:'home'});showSplash();
   if(/^#join-[A-Z0-9]+$/i.test(location.hash)){pendingJoin=location.hash.slice(6).toUpperCase();history.replaceState(null,'',location.pathname);if(!famOn())setTimeout(()=>famAct('join'),1200)}
   syncFam();
