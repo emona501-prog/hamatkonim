@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#b3203f">
 <link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-180.png">
 <link rel="icon" href="icon-192.png">
 <title>המתכונים שלי</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -62,6 +62,7 @@ details.orig summary{padding:14px 18px;font-weight:700;cursor:pointer;color:var(
 .sp-art{position:absolute;inset:0;display:grid;grid-template-columns:repeat(2,1fr);place-items:center;padding:12vh 10vw 40vh;color:#ffffff3a;background:linear-gradient(160deg,#b3203f,#7a1029)}
 .sp-art svg{width:min(30vw,150px)}
 .sp-in{position:relative;text-align:center;color:#fff;padding:0 20px max(40px,env(safe-area-inset-bottom));display:grid;gap:10px;justify-items:center}
+.sp-logo{width:min(46vw,220px);filter:drop-shadow(0 6px 18px #0007);margin-bottom:4px}
 .sp-in h1{font-size:clamp(38px,11vw,64px);text-shadow:0 2px 14px #0008}
 .sp-in p{margin:0;font-size:19px}.sp-in small{opacity:.75;font-size:14px}
 .sp-go{background:#fff;color:var(--brand);font:400 22px "Secular One",sans-serif;padding:14px 46px;border-radius:99px;box-shadow:0 8px 24px #0005}
@@ -354,7 +355,7 @@ function card(r){const [c]=theme(r.category),photo=settings.cardStyle==='photo'?
   <div class="tx">${photo?`<h3>${esc(r.title)}</h3>`:''}<small class="pv">${esc(pv)}</small><small>${esc(r.category)}${ni?' · '+ni+' מצרכים':''}${r.bakeTime?' · '+esc(r.bakeTime):''}</small></div></button>`}
 function pickBg(){const b=(settings.bgs||[]).length?settings.bgs:DEFBG;if(window._bgi==null)window._bgi=Math.floor(Math.random()*b.length);return b[window._bgi%b.length]}
 function showSplash(){if(settings.splash===false)return;const el=$('#splash'),bg=pickBg();
-  el.innerHTML=`<div class="sp-bg" ${bg?`style="background-image:url('${bg}')"`:''}>${bg?'':`<div class="sp-art">${['עוגות','עוגיות','מחבת וטיגון','קינוחים','מנות עיקריות'].map(c=>art(c)).join('')}</div>`}</div><div class="sp-in"><h1>${esc(settings.name)}</h1><p>${recipes.length} מתכונים מחכים לך</p><button class="sp-go">כניסה</button><small>חי אפליקציות</small></div>`;
+  el.innerHTML=`<div class="sp-bg" ${bg?`style="background-image:url('${bg}')"`:''}>${bg?'':`<div class="sp-art">${['עוגות','עוגיות','מחבת וטיגון','קינוחים','מנות עיקריות'].map(c=>art(c)).join('')}</div>`}</div><div class="sp-in"><img class="sp-logo" src="img/logo.png" alt=""><h1>${esc(settings.name)}</h1><p>${recipes.length} מתכונים מחכים לך</p><button class="sp-go">כניסה</button><small>חי אפליקציות</small></div>`;
   el.hidden=false;const close=()=>{el.classList.add('out');setTimeout(()=>{el.hidden=true;el.classList.remove('out')},350)};el.onclick=close;}
 function rBgList(){const b=settings.bgs||[];return b.length?`<div class="thumbs" style="justify-content:flex-start">${b.map((x,i)=>`<div><img src="${x}" alt=""><button type="button" data-rmbg="${i}" aria-label="הסר">×</button></div>`).join('')}</div>`:'<p class="note">כרגע מוצגים הרקעים המובנים של האפליקציה. תמונה שתוסיף כאן תחליף אותם.</p>'}
 function rHome(){
