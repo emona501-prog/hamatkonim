@@ -76,6 +76,7 @@ details.orig summary{padding:14px 18px;font-weight:700;cursor:pointer;color:var(
 .hero .band.pic::before{content:"";position:absolute;inset:0;background:linear-gradient(to top,#000c,#0000 60%)}
 .hero .band.pic h2{position:relative;text-shadow:0 2px 10px #000a}
 .ing.opt.have .t{text-decoration:none;color:inherit}
+.joinbar{display:flex;align-items:center;gap:10px;background:var(--card);border:2px solid var(--brand);border-radius:18px;padding:12px 14px;margin-bottom:14px}.joinbar>div{flex:1;display:grid}.joinbar small{color:var(--soft);font-size:14px}.joinbar .x{font-size:24px;color:var(--soft);width:32px}
 .pendbar{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;background:var(--sun);color:#2a1418;font:700 18px Heebo;padding:14px 16px;border-radius:16px;margin-bottom:14px;text-align:start}
 .rc .pend{display:inline-block;background:var(--sun);color:#2a1418;font:700 13px Heebo;padding:2px 8px;border-radius:99px;margin-bottom:4px}
 .rc .by{display:block;color:var(--soft);font-size:13px}
@@ -371,7 +372,7 @@ function rHome(){
   if(q)list=list.filter(r=>(r.title+' '+r.ingredients.flatMap(g=>g.items).join(' ')).includes(q));
   const pend=famOn()&&settings.fam.role==='admin'?recipes.filter(r=>r.fam&&r.fam.status==='pending').length:0;
   const bg=view.cat!=='הכל'&&CATBG[view.cat]&&!(settings.bgs||[]).length?CATBG[view.cat]:pickBg();
-  main.innerHTML=(pend&&view.cat!=='__pending'?`<button class="pendbar" data-cat="__pending">🔔 ${pend} מתכונים מחכים לאישור שלך</button>`:'')+(view.cat==='__pending'?`<div class="pendbar" style="cursor:default">מתכונים שמחכים לאישור <button class="btn" data-cat="הכל">חזרה לכל המתכונים</button></div>`:'')+(bg&&!q&&view.cat!=='__pending'?`<div class="banner" style="background-image:url('${bg}')"><span>${view.cat==='הכל'?'מה מכינים היום?':esc(view.cat)}</span></div>`:'')+(recipes.length?`<div class="chips">${used.map(c=>`<button class="chip ${c===view.cat?'on':''}" data-cat="${esc(c)}">${esc(c)}</button>`).join('')}</div>`:'')+
+  main.innerHTML=(!famOn()&&!inClaude()&&server()&&!settings.hideJoin&&view.cat==='הכל'&&!q?`<div class="joinbar"><div><b>🔑 יש לכם קוד משפחה?</b><small>הקישו אותו וקבלו את כל המתכונים של המשפחה</small></div><button class="btn pri" data-fam="join">הקשת קוד</button><button class="x" data-hidejoin aria-label="סגירה">×</button></div>`:'')+(pend&&view.cat!=='__pending'?`<button class="pendbar" data-cat="__pending">🔔 ${pend} מתכונים מחכים לאישור שלך</button>`:'')+(view.cat==='__pending'?`<div class="pendbar" style="cursor:default">מתכונים שמחכים לאישור <button class="btn" data-cat="הכל">חזרה לכל המתכונים</button></div>`:'')+(bg&&!q&&view.cat!=='__pending'?`<div class="banner" style="background-image:url('${bg}')"><span>${view.cat==='הכל'?'מה מכינים היום?':esc(view.cat)}</span></div>`:'')+(recipes.length?`<div class="chips">${used.map(c=>`<button class="chip ${c===view.cat?'on':''}" data-cat="${esc(c)}">${esc(c)}</button>`).join('')}</div>`:'')+
   (list.length?`<div class="grid">${list.map(card).join('')}</div><div class="tools" style="justify-content:center;margin-top:22px"><button class="btn" data-shareapp>${ICON.share} שיתוף האפליקציה</button></div>`:
   `<div class="empty"><svg viewBox="0 0 120 120"><ellipse cx="60" cy="100" rx="44" ry="8" fill="currentColor" opacity=".15"/><rect x="22" y="48" width="76" height="46" rx="10" fill="#b3203f"/><rect x="22" y="48" width="76" height="14" rx="7" fill="#f4b400"/><path d="M40 48c0-14 8-22 20-22s20 8 20 22" fill="none" stroke="#e0567a" stroke-width="6"/><circle cx="60" cy="24" r="6" fill="#f4b400"/></svg><h2 style="font-size:26px;color:var(--ink)">${q?'לא נמצא מתכון':'עדיין אין מתכונים'}</h2><p>${q?'נסה מילה אחרת':'לחץ על "מתכון חדש" וצלם את המתכון — המערכת תסדר אותו לבד'}</p></div>`);
 }
@@ -602,7 +603,7 @@ async function famAct(kind){
   toast(j.role==='admin'?'המשפחה מוכנה! עכשיו שתפו את הקוד':'הצטרפת ל'+j.familyName+' 🎉');await syncFam();rSettings()}
 let pendingJoin='';
 function famInvite(){const f=settings.fam;const link=APP_URL+'#join-'+f.code;
-  const txt=`👨‍👩‍👧 הצטרפו ל"${f.familyName}" באפליקציית ${settings.name}!\n\n1. פותחים את הקישור:\n${link}\n2. מתקינים על המסך (הסבר למטה)\n3. בהגדרות ← "הצטרפות למשפחה" ← קוד: ${f.code}\n\n${INSTALL_TXT}`;
+  const txt=`🍰 הצטרפו ל"${f.familyName}" באפליקציית ${settings.name}!\n\nלוחצים על הקישור וכותבים את השם — זהו:\n${link}\n\n(קוד המשפחה: ${f.code})`;
   const m=document.createElement('div');m.className='modal';m.innerHTML=`<div class="m"><h3 style="font-size:23px;margin-bottom:8px">הזמנת בני משפחה</h3><p style="margin:0 0 6px">קוד המשפחה:</p><div class="famcode">${f.code}</div><div class="f"><a class="btn ok" href="https://wa.me/?text=${encodeURIComponent(txt)}" target="_blank" rel="noopener">${ICON.wa} שליחת הזמנה בוואטסאפ</a><button class="btn" data-copy>העתקת ההזמנה</button><button class="btn" data-n>סגירה</button></div></div>`;
   document.body.append(m);m.onclick=async e=>{if(e.target===m||e.target.closest('[data-n]'))m.remove();else if(e.target.closest('[data-copy]')){try{await navigator.clipboard.writeText(txt);toast('ההזמנה הועתקה')}catch(err){}}}}
 async function famUploadAll(){const mineLocal=recipes.filter(r=>!r.fam);if(!mineLocal.length){toast('כל המתכונים כבר במשפחה');return}
@@ -655,6 +656,7 @@ document.addEventListener('click',async e=>{
   else if('testalarm' in d){fireAlarm({label:'ניסיון'})}
   else if('notif' in d){try{Notification.requestPermission().then(()=>rSettings())}catch(e){}}
   else if('shareapp' in d)shareApp();
+  else if('hidejoin' in d){settings.hideJoin=true;saveSet();rHome()}
   else if(d.fam)famAct(d.fam);
   else if('faminvite' in d)famInvite();
   else if('famsync' in d)syncFam(false);
