@@ -52,6 +52,20 @@ main{max-width:1100px;margin:auto;padding:18px max(4vw,14px) 120px}
 .hero .band{background:radial-gradient(circle at 90% 20%,#ffffff26 0 18%,transparent 19%),linear-gradient(150deg,var(--c),color-mix(in srgb,var(--c) 72%,#000));color:#fff;padding:22px 18px;display:flex;align-items:center;gap:14px}
 .hero .band h2{color:#fff;flex:1}.bic{width:70px;height:70px;flex:none}
 details.orig summary{padding:14px 18px;font-weight:700;cursor:pointer;color:var(--soft)}
+.banner{height:150px;border-radius:22px;margin-bottom:14px;background:center/cover;position:relative;overflow:hidden;display:flex;align-items:flex-end}
+.banner::before{content:"";position:absolute;inset:0;background:linear-gradient(to top,#000a,#0000 70%)}
+.banner span{position:relative;color:#fff;font:400 26px "Secular One",sans-serif;padding:12px 16px}
+#splash{position:fixed;inset:0;z-index:50;display:flex;align-items:flex-end;justify-content:center;transition:opacity .35s}
+#splash[hidden]{display:none}#splash.out{opacity:0}
+.sp-bg{position:absolute;inset:0;background:var(--brand) center/cover}
+.sp-bg::after{content:"";position:absolute;inset:0;background:linear-gradient(to top,#000c 0%,#0006 40%,#0000 75%)}
+.sp-art{position:absolute;inset:0;display:grid;grid-template-columns:repeat(2,1fr);place-items:center;padding:12vh 10vw 40vh;color:#ffffff3a;background:linear-gradient(160deg,#b3203f,#7a1029)}
+.sp-art svg{width:min(30vw,150px)}
+.sp-in{position:relative;text-align:center;color:#fff;padding:0 20px max(40px,env(safe-area-inset-bottom));display:grid;gap:10px;justify-items:center}
+.sp-in h1{font-size:clamp(38px,11vw,64px);text-shadow:0 2px 14px #0008}
+.sp-in p{margin:0;font-size:19px}.sp-in small{opacity:.75;font-size:14px}
+.sp-go{background:#fff;color:var(--brand);font:400 22px "Secular One",sans-serif;padding:14px 46px;border-radius:99px;box-shadow:0 8px 24px #0005}
+@media(prefers-reduced-motion:reduce){#splash{transition:none}}
 .rc .ph img{width:100%;height:100%;object-fit:cover;object-position:center 20%}
 .rc .tx{padding:10px 12px 12px}.rc h3{font-size:19px}
 .rc small{color:var(--soft);font-size:15px}
@@ -131,7 +145,9 @@ textarea{min-height:140px;line-height:1.6;resize:vertical}
   </div>
   <div class="search" id="searchWrap"><input id="q" type="search" placeholder="חיפוש מתכון או מצרך..." aria-label="חיפוש"></div>
 </header>
+<div id="splash" hidden></div>
 <main id="main"></main>
+<input type="file" id="bgIn" accept="image/*" multiple hidden>
 <button class="fab" id="fab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>מתכון חדש</button>
 <input type="file" id="fileIn" accept="image/*" multiple hidden>
 <input type="file" id="docIn" accept=".pdf,.docx,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain" hidden>
@@ -311,12 +327,18 @@ function card(r){const [c]=theme(r.category),photo=r.dish||(settings.cardStyle==
   return `<button class="rc" data-open="${r.id}" style="--c:${c}">${photo?`<div class="ph"><img src="${photo}" alt="" loading="lazy"></div>`:
   `<div class="ph art">${art(r.category)}<span class="ttl">${esc(r.title)}</span>${r.ovenTemp?`<span class="tmp">${esc(r.ovenTemp)}</span>`:''}</div>`}
   <div class="tx">${photo?`<h3>${esc(r.title)}</h3>`:''}<small class="pv">${esc(pv)}</small><small>${esc(r.category)}${ni?' · '+ni+' מצרכים':''}${r.bakeTime?' · '+esc(r.bakeTime):''}</small></div></button>`}
+function pickBg(){const b=settings.bgs||[];if(!b.length)return '';if(window._bgi==null)window._bgi=Math.floor(Math.random()*b.length);return b[window._bgi%b.length]}
+function showSplash(){if(settings.splash===false)return;const el=$('#splash'),bg=pickBg();
+  el.innerHTML=`<div class="sp-bg" ${bg?`style="background-image:url('${bg}')"`:''}>${bg?'':`<div class="sp-art">${['עוגות','עוגיות','מחבת וטיגון','קינוחים','מנות עיקריות'].map(c=>art(c)).join('')}</div>`}</div><div class="sp-in"><h1>${esc(settings.name)}</h1><p>${recipes.length} מתכונים מחכים לך</p><button class="sp-go">כניסה</button><small>חי אפליקציות</small></div>`;
+  el.hidden=false;const close=()=>{el.classList.add('out');setTimeout(()=>{el.hidden=true;el.classList.remove('out')},350)};el.onclick=close;}
+function rBgList(){const b=settings.bgs||[];return b.length?`<div class="thumbs" style="justify-content:flex-start">${b.map((x,i)=>`<div><img src="${x}" alt=""><button type="button" data-rmbg="${i}" aria-label="הסר">×</button></div>`).join('')}</div>`:'<p class="note">עדיין אין תמונות רקע — מוצג רקע מעוצב.</p>'}
 function rHome(){
   const q=$('#q').value.trim();
   const used=['הכל',...CATS.filter(c=>recipes.some(r=>r.category===c))];
   let list=recipes.filter(r=>view.cat==='הכל'||r.category===view.cat);
   if(q)list=list.filter(r=>(r.title+' '+r.ingredients.flatMap(g=>g.items).join(' ')).includes(q));
-  main.innerHTML=(recipes.length?`<div class="chips">${used.map(c=>`<button class="chip ${c===view.cat?'on':''}" data-cat="${esc(c)}">${esc(c)}</button>`).join('')}</div>`:'')+
+  const bg=pickBg();
+  main.innerHTML=(bg&&!q&&view.cat==='הכל'?`<div class="banner" style="background-image:url('${bg}')"><span>מה מכינים היום?</span></div>`:'')+(recipes.length?`<div class="chips">${used.map(c=>`<button class="chip ${c===view.cat?'on':''}" data-cat="${esc(c)}">${esc(c)}</button>`).join('')}</div>`:'')+
   (list.length?`<div class="grid">${list.map(card).join('')}</div>`:
   `<div class="empty"><svg viewBox="0 0 120 120"><ellipse cx="60" cy="100" rx="44" ry="8" fill="currentColor" opacity=".15"/><rect x="22" y="48" width="76" height="46" rx="10" fill="#b3203f"/><rect x="22" y="48" width="76" height="14" rx="7" fill="#f4b400"/><path d="M40 48c0-14 8-22 20-22s20 8 20 22" fill="none" stroke="#e0567a" stroke-width="6"/><circle cx="60" cy="24" r="6" fill="#f4b400"/></svg><h2 style="font-size:26px;color:var(--ink)">${q?'לא נמצא מתכון':'עדיין אין מתכונים'}</h2><p>${q?'נסה מילה אחרת':'לחץ על "מתכון חדש" וצלם את המתכון — המערכת תסדר אותו לבד'}</p></div>`);
 }
@@ -420,6 +442,7 @@ function rSettings(){
   <label>מודל Gemini<input type="text" name="gmodel" value="${esc(settings.gmodel)}" dir="ltr"></label>
   <div class="tools"><button class="btn pri">שמירה</button></div></form>
   ${sec('','גיבוי','',`<p class="note">שמור גיבוי של כל המתכונים (כולל תמונות) לקובץ, או שחזר מגיבוי.</p><div class="tools"><button class="btn" data-export>ייצוא גיבוי</button><button class="btn" data-import>שחזור מגיבוי</button><button class="btn" data-printall>הדפסת כל המתכונים</button></div>`)}
+  ${sec('','רקע ומסך פתיחה','',`<p class="note">תמונות שיופיעו במסך הפתיחה ובראש דף הבית (למשל קולאז'ים שהכנת בג'מיני). אם יש כמה — כל פעם תוצג אחת אחרת.</p>${rBgList()}<div class="tools" style="margin-top:10px"><button class="btn pri" data-addbg>הוספת תמונת רקע</button><button class="btn" data-splash>${settings.splash===false?'הפעלת מסך פתיחה':'כיבוי מסך פתיחה'}</button><button class="btn" data-previewsplash>תצוגה מקדימה</button></div>`)}
   <p class="note" style="text-align:center">חי אפליקציות · ${recipes.length} מתכונים שמורים</p>`;
   $('#stf').onsubmit=e=>{e.preventDefault();const f=new FormData(e.target);settings.name=f.get('name').trim()||'המתכונים שלי';settings.gkey=f.get('gkey').trim();settings.gmodel=f.get('gmodel').trim()||'gemini-2.5-flash';saveSet();setTitle();toast('נשמר');go({v:'home'})};
 }
@@ -467,6 +490,10 @@ document.addEventListener('click',async e=>{
   else if('parse' in d)doParse();
   else if('doc' in d)$('#docIn').click();
   else if('paste' in d)pasteBox();
+  else if('addbg' in d)$('#bgIn').click();
+  else if(d.rmbg!==undefined){settings.bgs.splice(+d.rmbg,1);window._bgi=null;saveSet();rSettings()}
+  else if('splash' in d){settings.splash=settings.splash===false;saveSet();rSettings()}
+  else if('previewsplash' in d){const o=settings.splash;settings.splash=true;showSplash();settings.splash=o}
   else if('cardstyle' in d){settings.cardStyle=d.cardstyle;saveSet();rSettings()}
   else if('backAdd' in d)rAdd();
   else if('manual' in d){go({v:'edit',draft:{id:uid(),created:Date.now(),title:'',category:'אחר',ingredients:[],steps:[],finish:[],tips:[],have:{},done:{},scans:pending.slice()}});pending=[]}
@@ -485,6 +512,7 @@ $('#shopBtn').onclick=()=>go({v:'shop'});
 $('#setBtn').onclick=()=>go({v:'settings'});
 $('#q').oninput=()=>rHome();
 $('#fileIn').onchange=async e=>{for(const f of e.target.files){try{pending.push(await shrink(f,1600,.85))}catch(err){toast('לא הצלחתי לפתוח תמונה')}}e.target.value='';rAdd()};
+$('#bgIn').onchange=async e=>{settings.bgs=settings.bgs||[];for(const f of e.target.files){try{settings.bgs.push(await shrink(f,1400,.82))}catch(err){toast('לא הצלחתי לפתוח תמונה')}}e.target.value='';window._bgi=null;saveSet();toast('הרקע נשמר');rSettings()};
 $('#docIn').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(f)importFile(f)};
 $('#dishIn').onchange=async e=>{const f=e.target.files[0];if(!f)return;const r=recipes.find(x=>x.id===view.id);r.dish=await shrink(f,1200,.82);saveAll();e.target.value='';rRecipe()};
 $('#importIn').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const j=JSON.parse(await f.text());const ids=new Set(recipes.map(r=>r.id));const add=(j.recipes||[]).filter(r=>!ids.has(r.id));recipes=[...add,...recipes];saveAll();toast('שוחזרו '+add.length+' מתכונים');go({v:'home'})}catch(err){toast('קובץ גיבוי לא תקין')}e.target.value=''};
@@ -574,7 +602,7 @@ const SEED=[
   const s=await dbGet('settings');if(s)settings={...settings,...s};
   const r=await dbGet('recipes');recipes=Array.isArray(r)?r:[];
   if((settings.seedV||0)<1){recipes=recipes.filter(x=>x.id!=='sample1');const ids=new Set(recipes.map(x=>x.id));recipes=[...recipes,...SEED.filter(x=>!ids.has(x.id))];settings.seedV=1;saveSet();saveAll()}
-  setTitle();go({v:'home'});
+  setTitle();go({v:'home'});showSplash();
   if(!window.claude&&'serviceWorker' in navigator&&location.protocol==='https:'){try{navigator.serviceWorker.register('sw.js').catch(()=>{})}catch(e){}}
   initSample().then(()=>{if(view.v==='add'||view.v==='settings')render()});
 })();
