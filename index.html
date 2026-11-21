@@ -76,6 +76,12 @@ details.orig summary{padding:14px 18px;font-weight:700;cursor:pointer;color:var(
 .hero .band.pic::before{content:"";position:absolute;inset:0;background:linear-gradient(to top,#000c,#0000 60%)}
 .hero .band.pic h2{position:relative;text-shadow:0 2px 10px #000a}
 .ing.opt.have .t{text-decoration:none;color:inherit}
+.pendbar{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;background:var(--sun);color:#2a1418;font:700 18px Heebo;padding:14px 16px;border-radius:16px;margin-bottom:14px;text-align:start}
+.rc .pend{display:inline-block;background:var(--sun);color:#2a1418;font:700 13px Heebo;padding:2px 8px;border-radius:99px;margin-bottom:4px}
+.rc .by{display:block;color:var(--soft);font-size:13px}
+.fambar{background:var(--card);border:2px solid var(--line);border-radius:16px;padding:12px 14px;margin-bottom:12px;font-size:16px}
+.fambar.pendb{border-color:var(--sun)}.fambar.rej{border-color:var(--brand)}
+.famcode{font:700 40px Heebo;letter-spacing:6px;text-align:center;direction:ltr;background:var(--card);border-radius:16px;padding:10px;margin-bottom:14px;color:var(--brand2)}
 #tchip{position:fixed;bottom:max(24px,env(safe-area-inset-bottom));right:16px;z-index:7;background:var(--mint);color:#fff;font:700 20px Heebo;padding:12px 18px;border-radius:99px;box-shadow:0 6px 18px #0004;cursor:pointer}
 #tchip[hidden],#alarm[hidden]{display:none}
 #alarm.full{position:fixed;inset:0;z-index:60;background:var(--brand);color:#fff;display:grid;place-items:center;text-align:center;animation:pl 1s infinite alternate}
@@ -289,8 +295,8 @@ async function importFile(f){const n=f.name.toLowerCase();busy('קורא את ה
 async function doParseText(text){busy('מסדר את המתכון...','מפרק למצרכים, שלבים, דגשים וסיום');
   let list;try{list=(await aiText(text)).filter(x=>x&&(x.title||x.ingredients?.length))}catch(e){if(e.message!=='NOAI'){toast(e.message);}list=null}
   if(!list||!list.length){const all=localParseAll(text);if(all.length===1){const r=all[0];r.id=uid();r.created=Date.now();toast('סידרתי לפי הכותרות בקובץ — בדוק ותקן');return go({v:'edit',draft:r})}
-    all.forEach(r=>{r.id=uid();r.created=Date.now()});recipes=[...all,...recipes];saveAll();toast('נוספו '+all.length+' מתכונים — כדאי לעבור ולבדוק');return go({v:'home',cat:'הכל'})}
-  const made=list.map(j=>{const r=normalize(j,{id:uid(),created:Date.now()});r.scans=[];return r});recipes=[...made,...recipes];saveAll();
+    all.forEach(r=>{r.id=uid();r.created=Date.now()});recipes=[...all,...recipes];saveAll();all.forEach(pushRecipe);toast('נוספו '+all.length+' מתכונים — כדאי לעבור ולבדוק');return go({v:'home',cat:'הכל'})}
+  const made=list.map(j=>{const r=normalize(j,{id:uid(),created:Date.now()});r.scans=[];return r});recipes=[...made,...recipes];saveAll();made.forEach(pushRecipe);
   if(made.length===1){toast('המתכון מוכן! בדוק שהכל נכון');go({v:'recipe',id:made[0].id,k:1})}else{toast('נוספו '+made.length+' מתכונים');go({v:'home',cat:'הכל'})}}
 function pasteBox(){const m=document.createElement('div');m.className='modal';m.innerHTML=`<div class="m"><h3 style="font-size:22px;margin-bottom:10px">הדבק כאן את טקסט המתכון</h3><textarea id="pt" style="min-height:220px"></textarea><div class="tools" style="margin:12px 0 0"><button class="btn pri" data-y>סדר את המתכון</button><button class="btn" data-n>ביטול</button></div></div>`;document.body.append(m);
   m.onclick=e=>{if(e.target===m||e.target.closest('[data-n]'))m.remove();else if(e.target.closest('[data-y]')){const t=m.querySelector('#pt').value;m.remove();if(t.trim())doParseText(t)}}}
@@ -352,7 +358,7 @@ function card(r){const [c]=theme(r.category),photo=settings.cardStyle==='photo'?
   return `<button class="rc" data-open="${r.id}" style="--c:${c}">${photo?`<div class="ph"><img src="${photo}" alt="" loading="lazy"></div>`:
   pic?`<div class="ph pic"><img src="${pic}" alt="" loading="lazy"><span class="ttl">${esc(r.title)}</span>${r.ovenTemp?`<span class="tmp">${esc(r.ovenTemp)}</span>`:''}</div>`:
   `<div class="ph art">${art(r.category)}<span class="ttl">${esc(r.title)}</span>${r.ovenTemp?`<span class="tmp">${esc(r.ovenTemp)}</span>`:''}</div>`}
-  <div class="tx">${photo?`<h3>${esc(r.title)}</h3>`:''}<small class="pv">${esc(pv)}</small><small>${esc(r.category)}${ni?' · '+ni+' מצרכים':''}${r.bakeTime?' · '+esc(r.bakeTime):''}</small></div></button>`}
+  <div class="tx">${photo?`<h3>${esc(r.title)}</h3>`:''}${r.fam&&r.fam.status!=='approved'?`<span class="pend">${r.fam.status==='pending'?'⏳ ממתין לאישור':'✖ נדחה'}</span>`:''}${r.fam&&r.fam.byName&&!mine(r)?`<small class="by">מאת ${esc(r.fam.byName)}</small>`:''}<small class="pv">${esc(pv)}</small><small>${esc(r.category)}${ni?' · '+ni+' מצרכים':''}${r.bakeTime?' · '+esc(r.bakeTime):''}</small></div></button>`}
 function pickBg(){const b=(settings.bgs||[]).length?settings.bgs:DEFBG;if(window._bgi==null)window._bgi=Math.floor(Math.random()*b.length);return b[window._bgi%b.length]}
 function showSplash(){if(settings.splash===false)return;const el=$('#splash'),bg=pickBg();
   el.innerHTML=`<div class="sp-bg" ${bg?`style="background-image:url('${bg}')"`:''}>${bg?'':`<div class="sp-art">${['עוגות','עוגיות','מחבת וטיגון','קינוחים','מנות עיקריות'].map(c=>art(c)).join('')}</div>`}</div><div class="sp-in"><img class="sp-logo" src="img/logo.png" alt=""><h1>${esc(settings.name)}</h1><p>${recipes.length} מתכונים מחכים לך</p><button class="sp-go">כניסה</button><small>חי אפליקציות</small></div>`;
@@ -361,10 +367,11 @@ function rBgList(){const b=settings.bgs||[];return b.length?`<div class="thumbs"
 function rHome(){
   const q=$('#q').value.trim();
   const used=['הכל',...CATS.filter(c=>recipes.some(r=>r.category===c))];
-  let list=recipes.filter(r=>view.cat==='הכל'||r.category===view.cat);
+  let list=view.cat==='__pending'?recipes.filter(r=>r.fam&&r.fam.status==='pending'):recipes.filter(r=>(view.cat==='הכל'||r.category===view.cat)&&!(r.fam&&r.fam.status==='rejected'&&!mine(r)));
   if(q)list=list.filter(r=>(r.title+' '+r.ingredients.flatMap(g=>g.items).join(' ')).includes(q));
+  const pend=famOn()&&settings.fam.role==='admin'?recipes.filter(r=>r.fam&&r.fam.status==='pending').length:0;
   const bg=view.cat!=='הכל'&&CATBG[view.cat]&&!(settings.bgs||[]).length?CATBG[view.cat]:pickBg();
-  main.innerHTML=(bg&&!q?`<div class="banner" style="background-image:url('${bg}')"><span>${view.cat==='הכל'?'מה מכינים היום?':esc(view.cat)}</span></div>`:'')+(recipes.length?`<div class="chips">${used.map(c=>`<button class="chip ${c===view.cat?'on':''}" data-cat="${esc(c)}">${esc(c)}</button>`).join('')}</div>`:'')+
+  main.innerHTML=(pend&&view.cat!=='__pending'?`<button class="pendbar" data-cat="__pending">🔔 ${pend} מתכונים מחכים לאישור שלך</button>`:'')+(view.cat==='__pending'?`<div class="pendbar" style="cursor:default">מתכונים שמחכים לאישור <button class="btn" data-cat="הכל">חזרה לכל המתכונים</button></div>`:'')+(bg&&!q&&view.cat!=='__pending'?`<div class="banner" style="background-image:url('${bg}')"><span>${view.cat==='הכל'?'מה מכינים היום?':esc(view.cat)}</span></div>`:'')+(recipes.length?`<div class="chips">${used.map(c=>`<button class="chip ${c===view.cat?'on':''}" data-cat="${esc(c)}">${esc(c)}</button>`).join('')}</div>`:'')+
   (list.length?`<div class="grid">${list.map(card).join('')}</div><div class="tools" style="justify-content:center;margin-top:22px"><button class="btn" data-shareapp>${ICON.share} שיתוף האפליקציה</button></div>`:
   `<div class="empty"><svg viewBox="0 0 120 120"><ellipse cx="60" cy="100" rx="44" ry="8" fill="currentColor" opacity=".15"/><rect x="22" y="48" width="76" height="46" rx="10" fill="#b3203f"/><rect x="22" y="48" width="76" height="14" rx="7" fill="#f4b400"/><path d="M40 48c0-14 8-22 20-22s20 8 20 22" fill="none" stroke="#e0567a" stroke-width="6"/><circle cx="60" cy="24" r="6" fill="#f4b400"/></svg><h2 style="font-size:26px;color:var(--ink)">${q?'לא נמצא מתכון':'עדיין אין מתכונים'}</h2><p>${q?'נסה מילה אחרת':'לחץ על "מתכון חדש" וצלם את המתכון — המערכת תסדר אותו לבד'}</p></div>`);
 }
@@ -375,13 +382,13 @@ function rRecipe(){
   const k=view.k||1,allIng=r.ingredients.flatMap((g,gi)=>g.items.map((t,i)=>({t,key:gi+'_'+i})));
   const haveN=allIng.filter(x=>r.have[x.key]).length,miss=allIng.filter(x=>!r.have[x.key]);
   const stepsN=r.steps.reduce((a,g)=>a+g.items.length,0);let n=0;
-  main.innerHTML=`<button class="back" data-home>${ICON.back} כל המתכונים</button>
+  main.innerHTML=`<button class="back" data-home>${ICON.back} כל המתכונים</button>${famBar(r)}
   <div class="hero ${view.cook?'cook':''}" style="--c:${theme(r.category)[0]}">${picOf(r)?`<div class="band pic" style="background-image:url('${picOf(r)}')" data-zoom="${picOf(r)}"><h2>${esc(r.title)}</h2></div><div class="tx">`:`<div class="band">${art(r.category,'bic')}<h2>${esc(r.title)}</h2></div><div class="tx">`}${r.intro?`<p style="margin:8px 0 0">${esc(r.intro)}</p>`:''}
   <div class="meta"><span class="badge">${esc(r.category)}</span>${r.ovenTemp?`<span class="badge oven">תנור ${esc(r.ovenTemp)}</span>`:''}${r.bakeTime?`<span class="badge oven">אפייה ${esc(r.bakeTime)}</span>`:''}${r.time?`<span class="badge">הכנה ${esc(r.time)}</span>`:''}${r.servings?`<span class="badge">${esc(r.servings)}</span>`:''}${r.measure?`<span class="badge cup">מודדים ב${esc(r.measure)}</span>`:''}</div></div></div>
   <div class="tools">${bakeMin(r)?`<button class="btn ok" data-rtimer="${bakeMin(r)}">⏲ טיימר אפייה ${bakeMin(r)} דק'</button>`:`<button class="btn ok" data-rtimer="0">⏲ טיימר</button>`}<button class="btn pri" data-cook>${view.cook?'יציאה ממצב בישול':'מצב בישול (מסך דולק)'}</button>
   <select class="btn" id="mult" aria-label="הגדלת כמויות">${[[.5,'חצי כמות'],[1,'כמות רגילה'],[1.5,'פי 1.5'],[2,'כמות כפולה'],[3,'פי 3']].map(([v,l])=>`<option value="${v}" ${v===k?'selected':''}>${l}</option>`).join('')}</select>
-  <button class="btn" data-dish>${ICON.cam} ${picOf(r)?'החלפת תמונה':'הוסף תמונת מאכל'}</button>
-  <button class="btn" data-edit>${ICON.edit} עריכה</button>
+  ${canEdit(r)?`<button class="btn" data-dish>${ICON.cam} ${picOf(r)?'החלפת תמונה':'הוסף תמונת מאכל'}</button>
+  <button class="btn" data-edit>${ICON.edit} עריכה</button>`:''}
   <button class="btn" data-share>${ICON.share} שיתוף</button><button class="btn" data-print>${ICON.print} הדפסה</button></div>
   <div class="${view.cook?'cook':''}">
   ${sec('s1','מצרכים',allIng.length?`יש ${haveN} מתוך ${allIng.length}`:'',allIng.length?`<p class="note" style="margin:6px 0 0">סמן כל מצרך שיש לך בבית</p><div class="prog"><i style="width:${allIng.length?haveN/allIng.length*100:0}%"></i></div>`+
@@ -415,7 +422,7 @@ async function doParse(){
     let r;
     if(target){const old=recipes.find(x=>x.id===target);r=normalize(j,old);r.scans=imgs;r.dish=old.dish;recipes=recipes.map(x=>x.id===target?r:x)}
     else{r=normalize(j,{id:uid(),created:Date.now()});r.scans=imgs;recipes.unshift(r)}
-    saveAll();pending=[];toast('המתכון מוכן! בדוק שהכל נכון');go({v:'recipe',id:r.id,into:null,k:1});
+    saveAll();pushRecipe(r);pending=[];toast('המתכון מוכן! בדוק שהכל נכון');go({v:'recipe',id:r.id,into:null,k:1});
   }catch(e){
     if(e.message==='NOAI'){const r={id:uid(),created:Date.now(),title:'',category:'אחר',ingredients:[],steps:[],finish:[],tips:[],have:{},done:{},scans:imgs};pending=[];go({v:'edit',draft:r});toast('אין מנוע פענוח זמין — הקלד את המתכון לפי התמונה');}
     else{main.innerHTML=`<div class="busy"><h2 style="font-size:24px">לא הצלחתי לקרוא</h2><p>${esc(e.message||'שגיאה')}</p><div class="tools"><button class="btn pri" data-parse>נסה שוב</button><button class="btn" data-back-add>חזרה</button></div></div>`}
@@ -445,7 +452,7 @@ function rEdit(){
   $('#ef').onsubmit=e=>{e.preventDefault();const f=new FormData(e.target);
     const n={...r,title:f.get('title').trim()||'מתכון ללא שם',category:f.get('category'),servings:f.get('servings'),ovenTemp:f.get('ovenTemp'),bakeTime:f.get('bakeTime'),time:f.get('time'),intro:f.get('intro'),measure:f.get('measure'),
     ingredients:fromText(f.get('ingredients')),steps:fromText(f.get('steps')),finish:fromText(f.get('finish')),tips:f.get('tips').split('\n').map(s=>s.trim()).filter(Boolean),have:{},done:{}};
-    delete n.sample;if(view.draft)recipes.unshift(n);else recipes=recipes.map(x=>x.id===r.id?n:x);saveAll();toast('נשמר');go({v:'recipe',id:n.id,draft:null,k:1})};
+    delete n.sample;if(view.draft)recipes.unshift(n);else recipes=recipes.map(x=>x.id===r.id?n:x);saveAll();toast('נשמר');pushRecipe(n);go({v:'recipe',id:n.id,draft:null,k:1})};
 }
 
 function rShop(){
@@ -461,6 +468,7 @@ function rShop(){
 function rSettings(){
   const A=alertCfg();
   main.innerHTML=`<button class="back" data-home>${ICON.back} חזרה</button><h2 style="font-size:30px;margin-bottom:14px">הגדרות</h2>
+  ${famSection()}
   ${sec('s1','שיתוף האפליקציה','',`<p class="note">שלחו לחברים ולמשפחה קישור לאפליקציה.</p><div class="tools"><button type="button" class="btn ok" data-shareapp>${ICON.share} שיתוף האפליקציה</button></div>`)}
   ${sec('s3','טיימר — איך להתריע','',`<p class="note">כשהטיימר מסתיים:</p>${[['vib','רטט'],['sound','צליל'],['full','הודעה על כל המסך'],['top','הודעה קטנה למעלה']].map(([k,l])=>`<button type="button" class="ing opt ${A[k]?'have':''}" data-alert="${k}"><span class="box">${A[k]?ICON.check:''}</span><span class="t">${l}</span></button>`).join('')}<div class="tools" style="margin-top:10px"><button type="button" class="btn" data-testalarm>ניסיון התראה</button>${'Notification' in window&&!window.claude?`<button type="button" class="btn" data-notif>${typeof Notification!=='undefined'&&Notification.permission==='granted'?'התראות מערכת מופעלות ✓':'הפעלת התראות מערכת'}</button>`:''}</div><p class="note">רטט עובד באנדרואיד (באייפון לא). כדי שהטיימר יצלצל בזמן, השאירו את האפליקציה פתוחה — המסך יישאר דלוק בזמן שטיימר רץ.</p>`)}
   <form class="f" id="stf">
@@ -546,6 +554,73 @@ function shareApp(){const txt=`🍰 ${settings.name} — אפליקציית מת
 document.addEventListener('click',e=>{if(e.target.closest('[data-stopalarm]'))stopAlarm()});
 $('#tchip').onclick=()=>timerPanel();
 
+/* ---------- family sharing ---------- */
+const DEFAULT_SERVER='';
+const inClaude=()=>!!window.claude;
+const server=()=>settings.server||DEFAULT_SERVER;
+const famOn=()=>!!(settings.fam&&settings.fam.memberId&&server());
+const mine=r=>!!(r.fam&&settings.fam&&r.fam.by===settings.fam.memberId);
+const canEdit=r=>!r.fam||!famOn()||settings.fam.role==='admin'||(mine(r)&&r.fam.status!=='approved');
+async function api(action,data={}){if(!server())throw new Error('השרת המשפחתי לא מוגדר');
+  const f=settings.fam||{};const r=await fetch(server(),{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action,code:f.code,memberId:f.memberId,...data})});
+  let j;try{j=await r.json()}catch(e){throw new Error('תקלה בחיבור לשרת')}if(!j.ok)throw new Error(j.error||'שגיאה');return j}
+const strip=r=>{const o=JSON.parse(JSON.stringify(r));['have','done','fam','sample','seed'].forEach(k=>delete o[k]);return o};
+async function pushRecipe(r){if(!famOn()||!r)return;try{const j=await api('submit',{recipe:strip(r)});const x=j.results[0];
+  const loc=recipes.find(y=>y.id===r.id);if(loc){Object.assign(loc,x.recipe);loc.fam={status:x.status,by:settings.fam.memberId,byName:settings.fam.name};saveAll()}
+  toast(x.status==='approved'?'נשמר גם אצל כל המשפחה':'נשלח למנהלת לאישור ⏳');if(view.v==='recipe'||view.v==='home')render()}catch(e){toast('לא נשלח למשפחה: '+e.message)}}
+let syncing=false;
+async function syncFam(quiet=true){if(!famOn()||syncing)return;syncing=true;
+  try{const j=await api('list',{since:settings.fam.since||0});let ch=0;
+    j.recipes.forEach(s=>{const i=recipes.findIndex(r=>r.id===s.id);
+      if(s.deleted||(s.status==='rejected'&&s.by!==settings.fam.memberId)||!s.data){if(i>=0){recipes.splice(i,1);ch++}return}
+      const old=i>=0?recipes[i]:null;const r={...s.data,id:s.id,have:old?.have||{},done:old?.done||{},fam:{status:s.status,by:s.by,byName:s.byName}};
+      if(i>=0)recipes[i]=r;else recipes.unshift(r);ch++});
+    settings.fam.since=j.now;settings.fam.pending=j.pending||0;settings.fam.familyName=j.familyName;settings.fam.role=j.role;saveSet();
+    if(ch){saveAll();if(view.v==='home'||view.v==='recipe'){const y=scrollY;render();scrollTo(0,y)}}
+    if(!quiet)toast(ch?`עודכנו ${ch} מתכונים`:'הכל מעודכן')}
+  catch(e){if(!quiet)toast(e.message)}finally{syncing=false}}
+setInterval(()=>{if(!document.hidden)syncFam()},60000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncFam()});
+function famBar(r){if(!r.fam||!famOn())return '';const st=r.fam.status;
+  if(st==='approved')return mine(r)||settings.fam.role==='admin'?'':`<div class="fambar">מתכון משפחתי${r.fam.byName?' · מאת '+esc(r.fam.byName):''}</div>`;
+  if(st==='rejected')return `<div class="fambar rej">✖ המנהלת לא אישרה את המתכון הזה. אפשר לערוך ולשלוח שוב, או למחוק.</div>`;
+  if(settings.fam.role==='admin')return `<div class="fambar pendb"><b>⏳ מחכה לאישור שלך</b>${r.fam.byName?' · נשלח ע"י '+esc(r.fam.byName):''}<div class="tools" style="margin:10px 0 0"><button class="btn ok" data-approve>✓ אישור</button><button class="btn" data-edit>${ICON.edit} עריכה לפני אישור</button><button class="btn" data-reject style="color:var(--brand2)">✖ דחייה</button></div></div>`;
+  return `<div class="fambar pendb">⏳ נשלח למנהלת — יופיע אצל כולם אחרי אישור</div>`}
+function formModal(title,fields,btn){return new Promise(res=>{const m=document.createElement('div');m.className='modal';
+  m.innerHTML=`<form class="m f"><h3 style="font-size:23px">${title}</h3>${fields.map(f=>`<label>${f.l}${f.s?`<small>${f.s}</small>`:''}<input type="${f.t||'text'}" name="${f.n}" value="${esc(f.v||'')}" ${f.t==='tel'?'inputmode="numeric"':''} required ${f.ltr?'dir="ltr"':''}></label>`).join('')}<div class="tools" style="margin:0"><button class="btn pri">${btn}</button><button type="button" class="btn" data-n>ביטול</button></div></form>`;
+  document.body.append(m);const fm=m.querySelector('form');fm.onsubmit=e=>{e.preventDefault();const o=Object.fromEntries(new FormData(fm));m.remove();res(o)};
+  m.onclick=e=>{if(e.target===m||e.target.closest('[data-n]')){m.remove();res(null)}};setTimeout(()=>fm.querySelector('input')?.focus(),50)})}
+async function famAct(kind){
+  if(inClaude()){toast('השיתוף המשפחתי עובד באפליקציה המותקנת מהקישור, לא בתוך Claude');return}
+  if(!server()){toast('קודם צריך לחבר את השרת (בהגדרות מתקדמות)');return}
+  let o,j;try{
+  if(kind==='create'){o=await formModal('יצירת משפחה חדשה',[{n:'familyName',l:'שם המשפחה',v:'משפחת '},{n:'name',l:'השם שלך (המנהלת)'},{n:'pin',l:'סיסמת מנהלת',s:'4–8 ספרות. בעזרתה אפשר להיכנס כמנהלת גם מטלפון אחר',t:'tel'}],'יצירה');if(!o)return;j=await api('create',o)}
+  else if(kind==='join'){o=await formModal('הצטרפות למשפחה',[{n:'code',l:'קוד המשפחה',s:'קיבלתם אותו מהמנהלת',v:pendingJoin||'',ltr:1},{n:'name',l:'השם שלך'}],'הצטרפות');if(!o)return;settings.fam={code:o.code.trim().toUpperCase()};j=await api('join',o)}
+  else if(kind==='admin'){o=await formModal('כניסת מנהלת',[{n:'code',l:'קוד המשפחה',ltr:1},{n:'name',l:'השם שלך'},{n:'pin',l:'סיסמת מנהלת',t:'tel'}],'כניסה');if(!o)return;settings.fam={code:o.code.trim().toUpperCase()};j=await api('adminLogin',o)}
+  }catch(e){settings.fam=null;saveSet();toast(e.message);return}
+  settings.fam={code:j.code||o.code.trim().toUpperCase(),memberId:j.memberId,role:j.role,familyName:j.familyName,name:o.name,since:0};saveSet();pendingJoin='';
+  toast(j.role==='admin'?'המשפחה מוכנה! עכשיו שתפו את הקוד':'הצטרפת ל'+j.familyName+' 🎉');await syncFam();rSettings()}
+let pendingJoin='';
+function famInvite(){const f=settings.fam;const link=APP_URL+'#join-'+f.code;
+  const txt=`👨‍👩‍👧 הצטרפו ל"${f.familyName}" באפליקציית ${settings.name}!\n\n1. פותחים את הקישור:\n${link}\n2. מתקינים על המסך (הסבר למטה)\n3. בהגדרות ← "הצטרפות למשפחה" ← קוד: ${f.code}\n\n${INSTALL_TXT}`;
+  const m=document.createElement('div');m.className='modal';m.innerHTML=`<div class="m"><h3 style="font-size:23px;margin-bottom:8px">הזמנת בני משפחה</h3><p style="margin:0 0 6px">קוד המשפחה:</p><div class="famcode">${f.code}</div><div class="f"><a class="btn ok" href="https://wa.me/?text=${encodeURIComponent(txt)}" target="_blank" rel="noopener">${ICON.wa} שליחת הזמנה בוואטסאפ</a><button class="btn" data-copy>העתקת ההזמנה</button><button class="btn" data-n>סגירה</button></div></div>`;
+  document.body.append(m);m.onclick=async e=>{if(e.target===m||e.target.closest('[data-n]'))m.remove();else if(e.target.closest('[data-copy]')){try{await navigator.clipboard.writeText(txt);toast('ההזמנה הועתקה')}catch(err){}}}}
+async function famUploadAll(){const mineLocal=recipes.filter(r=>!r.fam);if(!mineLocal.length){toast('כל המתכונים כבר במשפחה');return}
+  if(!await ask(`להעלות ${mineLocal.length} מתכונים מהטלפון הזה למשפחה? כולם יראו אותם.`,'העלאה'))return;
+  let done=0;for(let i=0;i<mineLocal.length;i+=4){const part=mineLocal.slice(i,i+4);toast(`מעלה... ${done}/${mineLocal.length}`);
+    try{const j=await api('submitMany',{recipes:part.map(strip)});j.results.forEach(x=>{const loc=recipes.find(y=>y.id===x.id);if(loc){Object.assign(loc,x.recipe);loc.fam={status:x.status,by:settings.fam.memberId,byName:settings.fam.name}}});done+=part.length;saveAll()}
+    catch(e){toast('נעצר: '+e.message);break}}
+  toast(`הועלו ${done} מתכונים`);rSettings()}
+async function famMembers(){try{const j=await api('members');const m=document.createElement('div');m.className='modal';
+  m.innerHTML=`<div class="m"><h3 style="font-size:23px;margin-bottom:8px">בני המשפחה (${j.members.length})</h3>${j.members.map(x=>`<div class="trow"><div><b style="font-size:18px">${esc(x.name)}</b><small>${x.role==='admin'?'מנהלת':'בן/בת משפחה'}</small></div></div>`).join('')}<div class="tools" style="margin-top:12px"><button class="btn" data-n>סגירה</button></div></div>`;
+  document.body.append(m);m.onclick=e=>{if(e.target===m||e.target.closest('[data-n]'))m.remove()}}catch(e){toast(e.message)}}
+function famSection(){const f=settings.fam;
+  if(inClaude())return sec('s1','משפחה — שיתוף מתכונים','',`<p class="note">השיתוף המשפחתי עובד באפליקציה המותקנת מהקישור (${APP_URL}), לא בתוך Claude.</p>`);
+  const adv=`<details style="margin-top:12px"><summary class="note" style="cursor:pointer">הגדרות מתקדמות — כתובת השרת</summary><div class="f" style="margin-top:8px"><input type="text" id="srv" dir="ltr" value="${esc(settings.server||'')}" placeholder="${esc(DEFAULT_SERVER||'https://script.google.com/macros/s/.../exec')}"><button type="button" class="btn" data-savesrv>שמירת כתובת</button></div></details>`;
+  if(!famOn())return sec('s1','משפחה — שיתוף מתכונים','',`<p class="note">כל בני המשפחה רואים את אותם מתכונים. כל אחד יכול להוסיף מתכון, והמנהלת מאשרת לפני שהוא נכנס לכולם.</p>${server()?`<div class="f"><button type="button" class="btn ok" data-fam="join">הצטרפות למשפחה עם קוד</button><button type="button" class="btn pri" data-fam="create">יצירת משפחה חדשה (למנהלת)</button><button type="button" class="btn" data-fam="admin">כניסת מנהלת מטלפון נוסף</button></div>`:'<p class="note">⚠️ השרת המשפחתי עוד לא מחובר.</p>'}${adv}`);
+  return sec('s1','משפחה — '+esc(f.familyName||''),f.role==='admin'?'מנהלת':'',`<p style="margin:4px 0">מחובר/ת בתור <b>${esc(f.name||'')}</b>. קוד המשפחה: <b dir="ltr">${f.code}</b></p>
+   <div class="tools"><button type="button" class="btn ok" data-faminvite>${ICON.wa} הזמנת בני משפחה</button><button type="button" class="btn" data-famsync>סנכרון עכשיו</button>${f.role==='admin'?`<button type="button" class="btn" data-fammembers>בני המשפחה</button><button type="button" class="btn" data-famupload>העלאת המתכונים שבטלפון למשפחה</button>`:''}<button type="button" class="btn" data-famleave style="color:var(--brand2)">יציאה מהמשפחה</button></div>${adv}`)}
+
 /* ---------- events ---------- */
 document.addEventListener('click',async e=>{
   const t=e.target.closest('button,[data-zoom]');if(!t)return;const d=t.dataset;
@@ -565,7 +640,7 @@ document.addEventListener('click',async e=>{
   else if('edit' in d)go({v:'edit',id:view.id,draft:null});
   else if('cancelEdit' in d)go(view.draft?{v:'home',draft:null}:{v:'recipe',id:view.id});
   else if('rescan' in d){pending=[...(recipes.find(x=>x.id===view.id).scans||[])];go({v:'add',into:view.id})}
-  else if('del' in d){if(await ask('למחוק את המתכון לצמיתות?','מחק')){recipes=recipes.filter(x=>x.id!==view.id);saveAll();go({v:'home'})}}
+  else if('del' in d){if(await ask('למחוק את המתכון לצמיתות?','מחק')){const r=recipes.find(x=>x.id===view.id);if(r&&r.fam&&famOn()){try{await api('delete',{id:r.id})}catch(err){toast(err.message);return}}recipes=recipes.filter(x=>x.id!==view.id);saveAll();go({v:'home'})}}
   else if('pick' in d)$('#fileIn').click();
   else if(d.rm!==undefined){pending.splice(+d.rm,1);rAdd()}
   else if('parse' in d)doParse();
@@ -580,6 +655,14 @@ document.addEventListener('click',async e=>{
   else if('testalarm' in d){fireAlarm({label:'ניסיון'})}
   else if('notif' in d){try{Notification.requestPermission().then(()=>rSettings())}catch(e){}}
   else if('shareapp' in d)shareApp();
+  else if(d.fam)famAct(d.fam);
+  else if('faminvite' in d)famInvite();
+  else if('famsync' in d)syncFam(false);
+  else if('fammembers' in d)famMembers();
+  else if('famupload' in d)famUploadAll();
+  else if('famleave' in d){if(await ask('לצאת מהמשפחה? המתכונים המשפחתיים יוסרו מהטלפון הזה.','יציאה')){recipes=recipes.filter(r=>!r.fam);settings.fam=null;saveSet();saveAll();rSettings()}}
+  else if('savesrv' in d){settings.server=$('#srv').value.trim();saveSet();toast('נשמר');rSettings()}
+  else if('approve' in d||'reject' in d){const r=recipes.find(x=>x.id===view.id);try{await api('approve' in d?'approve':'reject',{id:r.id});toast('approve' in d?'אושר ✓ — עכשיו כולם רואים אותו':'נדחה');await syncFam();go({v:'approve' in d?'recipe':'home',id:r.id})}catch(err){toast(err.message)}}
   else if('cardstyle' in d){settings.cardStyle=d.cardstyle;saveSet();rSettings()}
   else if('backAdd' in d)rAdd();
   else if('manual' in d){go({v:'edit',draft:{id:uid(),created:Date.now(),title:'',category:'אחר',ingredients:[],steps:[],finish:[],tips:[],have:{},done:{},scans:pending.slice()}});pending=[]}
@@ -601,7 +684,7 @@ $('#q').oninput=()=>rHome();
 $('#fileIn').onchange=async e=>{for(const f of e.target.files){try{pending.push(await shrink(f,1600,.85))}catch(err){toast('לא הצלחתי לפתוח תמונה')}}e.target.value='';rAdd()};
 $('#bgIn').onchange=async e=>{settings.bgs=settings.bgs||[];for(const f of e.target.files){try{settings.bgs.push(await shrink(f,1400,.82))}catch(err){toast('לא הצלחתי לפתוח תמונה')}}e.target.value='';window._bgi=null;saveSet();toast('הרקע נשמר');rSettings()};
 $('#docIn').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(f)importFile(f)};
-$('#dishIn').onchange=async e=>{const f=e.target.files[0];if(!f)return;const r=recipes.find(x=>x.id===view.id);r.dish=await shrink(f,1200,.82);saveAll();e.target.value='';rRecipe()};
+$('#dishIn').onchange=async e=>{const f=e.target.files[0];if(!f)return;const r=recipes.find(x=>x.id===view.id);r.dish=await shrink(f,1200,.82);saveAll();pushRecipe(r);e.target.value='';rRecipe()};
 $('#importIn').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const j=JSON.parse(await f.text());const ids=new Set(recipes.map(r=>r.id));const add=(j.recipes||[]).filter(r=>!ids.has(r.id));recipes=[...add,...recipes];saveAll();toast('שוחזרו '+add.length+' מתכונים');go({v:'home'})}catch(err){toast('קובץ גיבוי לא תקין')}e.target.value=''};
 
 /* ---------- recipes from the user's binder ---------- */
@@ -690,6 +773,8 @@ const SEED=[
   const r=await dbGet('recipes');recipes=Array.isArray(r)?r:[];
   if((settings.seedV||0)<1){recipes=recipes.filter(x=>x.id!=='sample1');const ids=new Set(recipes.map(x=>x.id));recipes=[...recipes,...SEED.filter(x=>!ids.has(x.id))];settings.seedV=1;saveSet();saveAll()}
   setTitle();go({v:'home'});showSplash();
+  if(/^#join-[A-Z0-9]+$/i.test(location.hash)){pendingJoin=location.hash.slice(6).toUpperCase();history.replaceState(null,'',location.pathname);if(!famOn())setTimeout(()=>famAct('join'),1200)}
+  syncFam();
   if(!window.claude&&'serviceWorker' in navigator&&location.protocol==='https:'){try{navigator.serviceWorker.register('sw.js').catch(()=>{})}catch(e){}}
   initSample().then(()=>{if(view.v==='add'||view.v==='settings')render()});
 })();
