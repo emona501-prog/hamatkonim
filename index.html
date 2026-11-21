@@ -66,6 +66,14 @@ details.orig summary{padding:14px 18px;font-weight:700;cursor:pointer;color:var(
 .sp-in p{margin:0;font-size:19px}.sp-in small{opacity:.75;font-size:14px}
 .sp-go{background:#fff;color:var(--brand);font:400 22px "Secular One",sans-serif;padding:14px 46px;border-radius:99px;box-shadow:0 8px 24px #0005}
 @media(prefers-reduced-motion:reduce){#splash{transition:none}}
+.rc .ph.pic{position:relative;aspect-ratio:1/1;display:flex;align-items:flex-end}
+.rc .ph.pic img{position:absolute;inset:0}
+.rc .ph.pic::after{content:"";position:absolute;inset:0;background:linear-gradient(to top,#000c,#0000 55%)}
+.rc .ph.pic .ttl{position:relative;z-index:1;padding:10px;width:100%;text-shadow:0 1px 8px #000a}
+.rc .ph.pic .tmp{z-index:1}
+.hero .band.pic{background:center/cover;min-height:240px;align-items:flex-end;position:relative;cursor:zoom-in}
+.hero .band.pic::before{content:"";position:absolute;inset:0;background:linear-gradient(to top,#000c,#0000 60%)}
+.hero .band.pic h2{position:relative;text-shadow:0 2px 10px #000a}
 .rc .ph img{width:100%;height:100%;object-fit:cover;object-position:center 20%}
 .rc .tx{padding:10px 12px 12px}.rc h3{font-size:19px}
 .rc small{color:var(--soft);font-size:15px}
@@ -169,6 +177,10 @@ bowl:'<path d="M7 24h34a17 17 0 0 1-34 0z"/><path d="M18 18c0-3 3-3 3-6M27 18c0-
 candle:'<path d="M15 40V22h7v18M26 40V22h7v18"/><path d="M18.5 16c-2-2 0-5 0-5s2 3 0 5M29.5 16c-2-2 0-5 0-5s2 3 0 5"/><path d="M10 40h28"/>',
 whisk:'<path d="M24 44V30"/><path d="M24 30c-8-4-10-14-6-22 4 0 6 14 6 22 0-8 2-22 6-22 4 8 2 18-6 22z"/>'};
 const THEME={'עוגות':['#b3203f','cake'],'עוגיות':['#c75a12','cookie'],'מאפים ולחמים':['#9a5b2e','bread'],'קינוחים':['#7b3fa0','cup'],'מחבת וטיגון':['#c28a00','pan'],'מנות עיקריות':['#1e7a5a','pot'],'תוספות':['#3d8b3d','leaf'],'סלטים':['#3d8b3d','leaf'],'מרקים':['#2f6f9f','bowl'],'שבת וחג':['#26408b','candle'],'אחר':['#6b4c55','whisk']};
+const PICS=Object.fromEntries('s01 s02 s03 s04 s05 s06 s07 s08 s09 s10 s11 s12 s13 s14 s15 s16 s17 s18 s19'.split(' ').map(i=>[i,'img/'+i+'.jpg']));
+const CATBG={'עוגות':'img/bg-cakes.jpg','עוגיות':'img/bg-cookies.jpg','מחבת וטיגון':'img/bg-pan.jpg','מנות עיקריות':'img/bg-meals.jpg','קינוחים':'img/bg-main.jpg'};
+const DEFBG=['img/bg-main.jpg','img/bg-cakes.jpg','img/bg-cookies.jpg','img/bg-pan.jpg'];
+const picOf=r=>r.dish||r.pic||PICS[r.id]||'';
 const theme=c=>THEME[c]||THEME['אחר'];
 const art=(c,cls='ic')=>`<svg class="${cls}" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">${IC[theme(c)[1]]}</svg>`;
 const ICON={check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M5 12l5 5 9-10"/></svg>',
@@ -321,24 +333,25 @@ function setTitle(){$('#appName').textContent=settings.name;document.title=setti
 function go(v){view={...view,...v};$('#searchWrap').style.display=view.v==='home'?'':'none';$('#fab').style.display=view.v==='home'?'':'none';render();window.scrollTo(0,0)}
 function render(){({home:rHome,recipe:rRecipe,add:rAdd,edit:rEdit,shop:rShop,settings:rSettings}[view.v]||rHome)()}
 
-function card(r){const [c]=theme(r.category),photo=r.dish||(settings.cardStyle==='photo'&&r.scans?.[0]);
+function card(r){const [c]=theme(r.category),photo=settings.cardStyle==='photo'?(r.scans?.[0]||picOf(r)):'',pic=photo?'':picOf(r);
   const ni=r.ingredients.reduce((a,g)=>a+g.items.length,0),ns=r.steps.reduce((a,g)=>a+g.items.length,0);
   const pv=r.ingredients.flatMap(g=>g.items).slice(0,3).map(t=>t.replace(/^[\d½¼¾⅓⅔⅛\/.\s–-]+/,'').replace(/^ו?(חצי|רבע|שליש)\s+/,'').replace(/^(כוסות|כוס|כפות|כף|כפיות|כפית|שקית|גרם|קילו|חבילת)\s+(ו(חצי|רבע)\s+)?/,'')).join(' · ');
   return `<button class="rc" data-open="${r.id}" style="--c:${c}">${photo?`<div class="ph"><img src="${photo}" alt="" loading="lazy"></div>`:
+  pic?`<div class="ph pic"><img src="${pic}" alt="" loading="lazy"><span class="ttl">${esc(r.title)}</span>${r.ovenTemp?`<span class="tmp">${esc(r.ovenTemp)}</span>`:''}</div>`:
   `<div class="ph art">${art(r.category)}<span class="ttl">${esc(r.title)}</span>${r.ovenTemp?`<span class="tmp">${esc(r.ovenTemp)}</span>`:''}</div>`}
   <div class="tx">${photo?`<h3>${esc(r.title)}</h3>`:''}<small class="pv">${esc(pv)}</small><small>${esc(r.category)}${ni?' · '+ni+' מצרכים':''}${r.bakeTime?' · '+esc(r.bakeTime):''}</small></div></button>`}
-function pickBg(){const b=settings.bgs||[];if(!b.length)return '';if(window._bgi==null)window._bgi=Math.floor(Math.random()*b.length);return b[window._bgi%b.length]}
+function pickBg(){const b=(settings.bgs||[]).length?settings.bgs:DEFBG;if(window._bgi==null)window._bgi=Math.floor(Math.random()*b.length);return b[window._bgi%b.length]}
 function showSplash(){if(settings.splash===false)return;const el=$('#splash'),bg=pickBg();
   el.innerHTML=`<div class="sp-bg" ${bg?`style="background-image:url('${bg}')"`:''}>${bg?'':`<div class="sp-art">${['עוגות','עוגיות','מחבת וטיגון','קינוחים','מנות עיקריות'].map(c=>art(c)).join('')}</div>`}</div><div class="sp-in"><h1>${esc(settings.name)}</h1><p>${recipes.length} מתכונים מחכים לך</p><button class="sp-go">כניסה</button><small>חי אפליקציות</small></div>`;
   el.hidden=false;const close=()=>{el.classList.add('out');setTimeout(()=>{el.hidden=true;el.classList.remove('out')},350)};el.onclick=close;}
-function rBgList(){const b=settings.bgs||[];return b.length?`<div class="thumbs" style="justify-content:flex-start">${b.map((x,i)=>`<div><img src="${x}" alt=""><button type="button" data-rmbg="${i}" aria-label="הסר">×</button></div>`).join('')}</div>`:'<p class="note">עדיין אין תמונות רקע — מוצג רקע מעוצב.</p>'}
+function rBgList(){const b=settings.bgs||[];return b.length?`<div class="thumbs" style="justify-content:flex-start">${b.map((x,i)=>`<div><img src="${x}" alt=""><button type="button" data-rmbg="${i}" aria-label="הסר">×</button></div>`).join('')}</div>`:'<p class="note">כרגע מוצגים הרקעים המובנים של האפליקציה. תמונה שתוסיף כאן תחליף אותם.</p>'}
 function rHome(){
   const q=$('#q').value.trim();
   const used=['הכל',...CATS.filter(c=>recipes.some(r=>r.category===c))];
   let list=recipes.filter(r=>view.cat==='הכל'||r.category===view.cat);
   if(q)list=list.filter(r=>(r.title+' '+r.ingredients.flatMap(g=>g.items).join(' ')).includes(q));
-  const bg=pickBg();
-  main.innerHTML=(bg&&!q&&view.cat==='הכל'?`<div class="banner" style="background-image:url('${bg}')"><span>מה מכינים היום?</span></div>`:'')+(recipes.length?`<div class="chips">${used.map(c=>`<button class="chip ${c===view.cat?'on':''}" data-cat="${esc(c)}">${esc(c)}</button>`).join('')}</div>`:'')+
+  const bg=view.cat!=='הכל'&&CATBG[view.cat]&&!(settings.bgs||[]).length?CATBG[view.cat]:pickBg();
+  main.innerHTML=(bg&&!q?`<div class="banner" style="background-image:url('${bg}')"><span>${view.cat==='הכל'?'מה מכינים היום?':esc(view.cat)}</span></div>`:'')+(recipes.length?`<div class="chips">${used.map(c=>`<button class="chip ${c===view.cat?'on':''}" data-cat="${esc(c)}">${esc(c)}</button>`).join('')}</div>`:'')+
   (list.length?`<div class="grid">${list.map(card).join('')}</div>`:
   `<div class="empty"><svg viewBox="0 0 120 120"><ellipse cx="60" cy="100" rx="44" ry="8" fill="currentColor" opacity=".15"/><rect x="22" y="48" width="76" height="46" rx="10" fill="#b3203f"/><rect x="22" y="48" width="76" height="14" rx="7" fill="#f4b400"/><path d="M40 48c0-14 8-22 20-22s20 8 20 22" fill="none" stroke="#e0567a" stroke-width="6"/><circle cx="60" cy="24" r="6" fill="#f4b400"/></svg><h2 style="font-size:26px;color:var(--ink)">${q?'לא נמצא מתכון':'עדיין אין מתכונים'}</h2><p>${q?'נסה מילה אחרת':'לחץ על "מתכון חדש" וצלם את המתכון — המערכת תסדר אותו לבד'}</p></div>`);
 }
@@ -350,11 +363,11 @@ function rRecipe(){
   const haveN=allIng.filter(x=>r.have[x.key]).length,miss=allIng.filter(x=>!r.have[x.key]);
   const stepsN=r.steps.reduce((a,g)=>a+g.items.length,0);let n=0;
   main.innerHTML=`<button class="back" data-home>${ICON.back} כל המתכונים</button>
-  <div class="hero ${view.cook?'cook':''}" style="--c:${theme(r.category)[0]}">${r.dish?`<img src="${r.dish}" alt="${esc(r.title)}" data-zoom="${r.dish}"><div class="tx"><h2>${esc(r.title)}</h2>`:`<div class="band">${art(r.category,'bic')}<h2>${esc(r.title)}</h2></div><div class="tx">`}${r.intro?`<p style="margin:8px 0 0">${esc(r.intro)}</p>`:''}
+  <div class="hero ${view.cook?'cook':''}" style="--c:${theme(r.category)[0]}">${picOf(r)?`<div class="band pic" style="background-image:url('${picOf(r)}')" data-zoom="${picOf(r)}"><h2>${esc(r.title)}</h2></div><div class="tx">`:`<div class="band">${art(r.category,'bic')}<h2>${esc(r.title)}</h2></div><div class="tx">`}${r.intro?`<p style="margin:8px 0 0">${esc(r.intro)}</p>`:''}
   <div class="meta"><span class="badge">${esc(r.category)}</span>${r.ovenTemp?`<span class="badge oven">תנור ${esc(r.ovenTemp)}</span>`:''}${r.bakeTime?`<span class="badge oven">אפייה ${esc(r.bakeTime)}</span>`:''}${r.time?`<span class="badge">הכנה ${esc(r.time)}</span>`:''}${r.servings?`<span class="badge">${esc(r.servings)}</span>`:''}${r.measure?`<span class="badge cup">מודדים ב${esc(r.measure)}</span>`:''}</div></div></div>
   <div class="tools"><button class="btn pri" data-cook>${view.cook?'יציאה ממצב בישול':'מצב בישול (מסך דולק)'}</button>
   <select class="btn" id="mult" aria-label="הגדלת כמויות">${[[.5,'חצי כמות'],[1,'כמות רגילה'],[1.5,'פי 1.5'],[2,'כמות כפולה'],[3,'פי 3']].map(([v,l])=>`<option value="${v}" ${v===k?'selected':''}>${l}</option>`).join('')}</select>
-  <button class="btn" data-dish>${ICON.cam} ${r.dish?'החלף תמונת מאכל':'הוסף תמונת מאכל'}</button>
+  <button class="btn" data-dish>${ICON.cam} ${picOf(r)?'החלפת תמונה':'הוסף תמונת מאכל'}</button>
   <button class="btn" data-edit>${ICON.edit} עריכה</button>
   <button class="btn" data-share>${ICON.share} שיתוף</button><button class="btn" data-print>${ICON.print} הדפסה</button></div>
   <div class="${view.cook?'cook':''}">
