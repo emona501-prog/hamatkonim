@@ -189,7 +189,7 @@ bowl:'<path d="M7 24h34a17 17 0 0 1-34 0z"/><path d="M18 18c0-3 3-3 3-6M27 18c0-
 candle:'<path d="M15 40V22h7v18M26 40V22h7v18"/><path d="M18.5 16c-2-2 0-5 0-5s2 3 0 5M29.5 16c-2-2 0-5 0-5s2 3 0 5"/><path d="M10 40h28"/>',
 whisk:'<path d="M24 44V30"/><path d="M24 30c-8-4-10-14-6-22 4 0 6 14 6 22 0-8 2-22 6-22 4 8 2 18-6 22z"/>'};
 const THEME={'עוגות':['#b3203f','cake'],'עוגיות':['#c75a12','cookie'],'מאפים ולחמים':['#9a5b2e','bread'],'קינוחים':['#7b3fa0','cup'],'מחבת וטיגון':['#c28a00','pan'],'מנות עיקריות':['#1e7a5a','pot'],'תוספות':['#3d8b3d','leaf'],'סלטים':['#3d8b3d','leaf'],'מרקים':['#2f6f9f','bowl'],'שבת וחג':['#26408b','candle'],'אחר':['#6b4c55','whisk']};
-const PICS=Object.fromEntries('s01 s02 s03 s04 s05 s07 s08 s09 s10 s11 s12 s13 s14 s15 s16 s17 s18 s19'.split(' ').map(i=>[i,'img/'+i+'.jpg']));
+const PICS=Object.fromEntries('s01 s02 s03 s04 s05 s06 s07 s08 s09 s10 s11 s12 s13 s14 s15 s16 s17 s18 s19'.split(' ').map(i=>[i,'img/'+i+'.jpg']));
 const CATBG={'עוגות':'img/bg-cakes.jpg','עוגיות':'img/bg-cookies.jpg','מחבת וטיגון':'img/bg-pan.jpg','מנות עיקריות':'img/bg-meals.jpg','קינוחים':'img/bg-main.jpg'};
 const DEFBG=['img/bg-main.jpg','img/bg-cakes.jpg','img/bg-cookies.jpg','img/bg-pan.jpg'];
 const picOf=r=>r.dish||r.pic||PICS[r.id]||'';
