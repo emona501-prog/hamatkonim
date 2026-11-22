@@ -513,7 +513,7 @@ function rSettings(){
   ${catsSection()}
   ${foldersSection()}
   ${sec('s1','שיתוף האפליקציה','',`<p class="note">שלחו לחברים ולמשפחה קישור לאפליקציה.</p><div class="tools"><button type="button" class="btn ok" data-shareapp>${ICON.share} שיתוף האפליקציה</button></div>`)}
-  ${sec('s3','טיימר — איך להתריע','',`<p class="note">כשהטיימר מסתיים:</p>${[['vib','רטט'],['sound','צליל'],['full','הודעה על כל המסך'],['top','הודעה קטנה למעלה']].map(([k,l])=>`<button type="button" class="ing opt ${A[k]?'have':''}" data-alert="${k}"><span class="box">${A[k]?ICON.check:''}</span><span class="t">${l}</span></button>`).join('')}<div class="tools" style="margin-top:10px"><button type="button" class="btn" data-testalarm>ניסיון התראה</button>${'Notification' in window&&!window.claude?`<button type="button" class="btn" data-notif>${typeof Notification!=='undefined'&&Notification.permission==='granted'?'התראות מערכת מופעלות ✓':'הפעלת התראות מערכת'}</button>`:''}</div><p class="note">רטט עובד באנדרואיד (באייפון לא). כדי שהטיימר יצלצל בזמן, השאירו את האפליקציה פתוחה — המסך יישאר דלוק בזמן שטיימר רץ.</p>`)}
+  ${sec('s3','טיימר — איך להתריע','',`<p class="note">כשהטיימר מסתיים:</p>${[['vib','רטט'],['sound','צליל'],['full','הודעה על כל המסך'],['top','הודעה קטנה למעלה']].map(([k,l])=>`<button type="button" class="ing opt ${A[k]?'have':''}" data-alert="${k}"><span class="box">${A[k]?ICON.check:''}</span><span class="t">${l}</span></button>`).join('')}<p style="margin:12px 0 4px"><b>סוג הצליל:</b></p><div class="chips" style="flex-wrap:wrap">${Object.entries(SOUNDS).map(([k,l])=>`<button type="button" class="chip ${(settings.alarmSound||'alarm')===k?'on':''}" data-snd="${k}">${l}</button>`).join('')}</div><div class="tools" style="margin-top:10px"><button type="button" class="btn" data-testalarm>ניסיון התראה</button>${'Notification' in window&&!window.claude?`<button type="button" class="btn" data-notif>${typeof Notification!=='undefined'&&Notification.permission==='granted'?'התראות מערכת מופעלות ✓':'הפעלת התראות מערכת'}</button>`:''}</div><p class="note">💡 עוצמת הצליל נקבעת לפי <b>עוצמת המדיה</b> בטלפון (לא הצלצול) — מגבירים בכפתורי הווליום כשהאפליקציה פתוחה. רטט עובד באנדרואיד (באייפון לא). כדי שהטיימר יצלצל בזמן, השאירו את האפליקציה פתוחה — המסך יישאר דלוק בזמן שטיימר רץ.</p>`)}
   <form class="f" id="stf">
   <label>שם האפליקציה<input type="text" name="name" value="${esc(settings.name)}" placeholder="המתכונים של..."></label>
   <label>גודל הכתב<div class="tools" style="margin:0"><button type="button" class="btn" data-fs="-1">א-</button><span class="badge">${settings.fs}</span><button type="button" class="btn" data-fs="1">א+</button></div></label>
@@ -554,10 +554,21 @@ function bakeMin(r){const m=(r.bakeTime||'').match(/(\d+)/);if(m)return +m[1];if
 const fmtT=ms=>{const t=Math.max(0,Math.ceil(ms/1000)),h=Math.floor(t/3600),m=Math.floor(t%3600/60),s=t%60;return (h?h+':'+String(m).padStart(2,'0'):m)+':'+String(s).padStart(2,'0')};
 let actx=null,beepI=null,vibI=null,wl2=null;
 function unlockAudio(){try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();if(actx.state==='suspended')actx.resume()}catch(e){}}
-function beep(){if(!actx)return;try{[0,.25,.5].forEach(o=>{const g=actx.createGain(),os=actx.createOscillator();os.type='square';os.frequency.value=880;g.gain.setValueAtTime(.0001,actx.currentTime+o);g.gain.exponentialRampToValueAtTime(.25,actx.currentTime+o+.02);g.gain.exponentialRampToValueAtTime(.0001,actx.currentTime+o+.18);os.connect(g).connect(actx.destination);os.start(actx.currentTime+o);os.stop(actx.currentTime+o+.2)})}catch(e){}}
+const SOUNDS={alarm:'שעון מעורר (חזק)',siren:'סירנה (הכי חזק)',beep:'ביפים מהירים',bells:'פעמונים',chime:'צליל עדין'};
+let master=null;
+function out(){if(master)return master;const c=actx.createDynamicsCompressor();c.threshold.value=-20;c.knee.value=0;c.ratio.value=12;c.attack.value=.002;c.release.value=.1;
+  const g=actx.createGain();g.gain.value=2.2;c.connect(g).connect(actx.destination);master=c;return c}
+function tone(type,f,t0,d,vol=1,f2){const o=actx.createOscillator(),g=actx.createGain();o.type=type;o.frequency.setValueAtTime(f,t0);if(f2)o.frequency.linearRampToValueAtTime(f2,t0+d);
+  g.gain.setValueAtTime(.0001,t0);g.gain.exponentialRampToValueAtTime(vol,t0+.01);g.gain.setValueAtTime(vol,t0+d*.8);g.gain.exponentialRampToValueAtTime(.0001,t0+d);o.connect(g).connect(out());o.start(t0);o.stop(t0+d+.02)}
+function beep(){if(!actx)return;const t=actx.currentTime,k=settings.alarmSound||'alarm';try{
+  if(k==='alarm'){for(let i=0;i<8;i++){tone('square',1000,t+i*.13,.09,1);tone('square',2000,t+i*.13,.09,.5)}}
+  else if(k==='siren'){tone('sawtooth',600,t,.55,1,1400);tone('sawtooth',1400,t+.55,.55,1,600);tone('square',600,t,.55,.6,1400);tone('square',1400,t+.55,.55,.6,600)}
+  else if(k==='beep'){[0,.2,.4,.6].forEach(o=>tone('square',2400,t+o,.12,1))}
+  else if(k==='bells'){[[1319,0],[1047,.3],[1175,.6],[784,.9]].forEach(([f,o])=>{tone('triangle',f,t+o,.5,1);tone('sine',f*2,t+o,.4,.6)})}
+  else{[[880,0],[1109,.25],[1319,.5]].forEach(([f,o])=>tone('sine',f,t+o,.5,.9))}}catch(e){}}
 function stopAlarm(){clearInterval(beepI);clearInterval(vibI);beepI=vibI=null;try{navigator.vibrate&&navigator.vibrate(0)}catch(e){}const a=$('#alarm');a.hidden=true;a.className=''}
 function fireAlarm(t){const A=alertCfg();stopAlarm();const msg=`הזמן נגמר!`,sub=t.label||'טיימר';
-  if(A.sound){unlockAudio();beep();beepI=setInterval(beep,1200);setTimeout(()=>{clearInterval(beepI)},120000)}
+  if(A.sound){unlockAudio();beep();beepI=setInterval(beep,1300);setTimeout(()=>{clearInterval(beepI)},120000)}
   if(A.vib&&navigator.vibrate){try{navigator.vibrate([600,300,600,300,600]);vibI=setInterval(()=>navigator.vibrate([600,300,600,300,600]),3000);setTimeout(()=>clearInterval(vibI),60000)}catch(e){}}
   const a=$('#alarm');
   if(A.full){a.className='full';a.innerHTML=`<div><div class="al-ic">⏰</div><h2>${msg}</h2><p>${esc(sub)}</p><button class="sp-go" data-stopalarm>עצירה</button></div>`;a.hidden=false}
@@ -738,6 +749,7 @@ document.addEventListener('click',async e=>{
   else if('previewsplash' in d){const o=settings.splash;settings.splash=true;showSplash();settings.splash=o}
   else if(d.rtimer!==undefined){const r=recipes.find(x=>x.id===view.id);timerPanel(+d.rtimer||'',r?r.title:'')}
   else if(d.alert){const A=alertCfg();A[d.alert]=!A[d.alert];settings.alert=A;saveSet();rSettings()}
+  else if(d.snd){settings.alarmSound=d.snd;saveSet();unlockAudio();beep();rSettings()}
   else if('testalarm' in d){fireAlarm({label:'ניסיון'})}
   else if('notif' in d){try{Notification.requestPermission().then(()=>rSettings())}catch(e){}}
   else if('shareapp' in d)shareApp();
