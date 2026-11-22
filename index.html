@@ -84,6 +84,9 @@ details.orig summary{padding:14px 18px;font-weight:700;cursor:pointer;color:var(
 .cdel{position:absolute;top:10px;left:0;color:var(--soft);font-size:14px}
 .rc .soc{display:block;font-size:14px;margin-bottom:2px}
 .tagc{cursor:pointer}.tagc:has(input:checked){background:var(--brand);border-color:var(--brand);color:#fff}
+.fstar{position:absolute;top:6px;inset-inline-end:8px;font-size:22px;z-index:2;filter:drop-shadow(0 1px 3px #0008)}
+.rc .ph.art{position:relative}
+.favb.on{background:#fff4cc;border-color:var(--sun);color:#7a5600}
 .pendbar{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;background:var(--sun);color:#2a1418;font:700 18px Heebo;padding:14px 16px;border-radius:16px;margin-bottom:14px;text-align:start}
 .rc .pend{display:inline-block;background:var(--sun);color:#2a1418;font:700 13px Heebo;padding:2px 8px;border-radius:99px;margin-bottom:4px}
 .rc .by{display:block;color:var(--soft);font-size:13px}
@@ -204,7 +207,7 @@ bowl:'<path d="M7 24h34a17 17 0 0 1-34 0z"/><path d="M18 18c0-3 3-3 3-6M27 18c0-
 candle:'<path d="M15 40V22h7v18M26 40V22h7v18"/><path d="M18.5 16c-2-2 0-5 0-5s2 3 0 5M29.5 16c-2-2 0-5 0-5s2 3 0 5"/><path d="M10 40h28"/>',
 whisk:'<path d="M24 44V30"/><path d="M24 30c-8-4-10-14-6-22 4 0 6 14 6 22 0-8 2-22 6-22 4 8 2 18-6 22z"/>'};
 const THEME={'עוגות':['#b3203f','cake'],'עוגיות':['#c75a12','cookie'],'מאפים ולחמים':['#9a5b2e','bread'],'קינוחים':['#7b3fa0','cup'],'מחבת וטיגון':['#c28a00','pan'],'מנות עיקריות':['#1e7a5a','pot'],'תוספות':['#3d8b3d','leaf'],'סלטים':['#3d8b3d','leaf'],'מרקים':['#2f6f9f','bowl'],'שבת וחג':['#26408b','candle'],'אחר':['#6b4c55','whisk']};
-const PICS=Object.fromEntries('s01 s02 s03 s04 s05 s06 s07 s08 s09 s10 s11 s12 s13 s14 s15 s16 s17 s18 s19'.split(' ').map(i=>[i,'img/'+i+'.jpg']));
+const PICS=Object.fromEntries('s01 s02 s03 s04 s05 s06 s07 s08 s09 s10 s11 s12 s13 s14 s15 s16 s17 s18 s19 s22'.split(' ').map(i=>[i,'img/'+i+'.jpg']));
 const CATBG={'עוגות':'img/bg-cakes.jpg','עוגיות':'img/bg-cookies.jpg','מחבת וטיגון':'img/bg-pan.jpg','מנות עיקריות':'img/bg-meals.jpg','קינוחים':'img/bg-main.jpg'};
 const DEFBG=['img/bg-main.jpg','img/bg-cakes.jpg','img/bg-cookies.jpg','img/bg-pan.jpg'];
 const picOf=r=>r.dish||r.pic||PICS[r.id]||'';
@@ -368,12 +371,30 @@ function setTitle(){$('#appName').textContent=settings.name;document.title=setti
 function go(v){view={...view,...v};$('#searchWrap').style.display=view.v==='home'?'':'none';$('#fab').style.display=view.v==='home'?'':'none';render();window.scrollTo(0,0)}
 function render(){({home:rHome,recipe:rRecipe,add:rAdd,edit:rEdit,shop:rShop,settings:rSettings}[view.v]||rHome)()}
 
+/* ---------- favorites & personal folders ---------- */
+const favs=()=>settings.favs||(settings.favs=[{id:'fav',name:'מועדפים',ids:[]}]);
+const isFav=r=>favs()[0].ids.includes(r.id);
+const inFolder=(r,id)=>(favs().find(f=>f.id===id)||{ids:[]}).ids.includes(r.id);
+function toggleFav(r){const f=favs()[0];f.ids=f.ids.includes(r.id)?f.ids.filter(x=>x!==r.id):[...f.ids,r.id];saveSet();toast(isFav(r)?'⭐ נוסף למועדפים':'הוסר מהמועדפים')}
+function folderModal(r){const m=document.createElement('div');m.className='modal';
+  const draw=()=>{m.innerHTML=`<div class="m"><h3 style="font-size:22px;margin-bottom:8px">שמירה בתיקייה</h3><p class="note" style="margin:0 0 8px">${esc(r.title)}</p>
+    ${favs().map(f=>`<button type="button" class="ing opt ${f.ids.includes(r.id)?'have':''}" data-tf="${f.id}"><span class="box">${f.ids.includes(r.id)?ICON.check:''}</span><span class="t">${f.id==='fav'?'⭐':'📁'} ${esc(f.name)} <small class="note">(${f.ids.length})</small></span></button>`).join('')}
+    <div class="tools" style="margin-top:10px"><input type="text" id="nf" placeholder="תיקייה חדשה, למשל: לשבת" style="flex:1;min-width:150px"><button type="button" class="btn pri" data-nf>יצירה</button></div>
+    <div class="tools" style="margin-top:8px"><button type="button" class="btn" data-n>סיום</button></div></div>`};
+  draw();document.body.append(m);
+  m.onclick=e=>{const b=e.target.closest('button');if(e.target===m||(b&&'n' in b.dataset)){m.remove();render();return}if(!b)return;
+    if(b.dataset.tf){const f=favs().find(x=>x.id===b.dataset.tf);f.ids=f.ids.includes(r.id)?f.ids.filter(x=>x!==r.id):[...f.ids,r.id];saveSet();draw()}
+    else if('nf' in b.dataset){const v=m.querySelector('#nf').value.trim().slice(0,30);if(!v)return;favs().push({id:uid(),name:v,ids:[r.id]});saveSet();draw()}}}
+function foldersSection(){const fs=favs().slice(1);
+  return sec('s3','התיקיות שלי','',`<p class="note">⭐ מועדפים ותיקיות אישיות — נשמרים רק בטלפון שלך, ואף אחד אחר לא רואה אותם. כדי לשמור מתכון בתיקייה: נכנסים למתכון ולוחצים "📁 לתיקייה".</p>
+  ${fs.length?fs.map(f=>`<div class="trow"><div><b style="font-size:18px">📁 ${esc(f.name)}</b><small>${f.ids.length} מתכונים</small></div><button type="button" class="btn" data-renf="${f.id}">שינוי שם</button><button type="button" class="btn" data-delf="${f.id}" style="color:var(--brand2)">מחיקה</button></div>`).join(''):'<p class="note">עוד אין תיקיות.</p>'}
+  <div class="tools" style="margin-top:10px"><input type="text" id="nf2" placeholder="תיקייה חדשה" style="flex:1;min-width:150px"><button type="button" class="btn pri" data-nf2>יצירה</button></div>`)}
 function card(r){const [c]=theme(r.category),photo=settings.cardStyle==='photo'?(r.scans?.[0]||picOf(r)):'',pic=photo?'':picOf(r);
   const ni=r.ingredients.reduce((a,g)=>a+g.items.length,0),ns=r.steps.reduce((a,g)=>a+g.items.length,0);
   const pv=r.ingredients.flatMap(g=>g.items).slice(0,3).map(t=>t.replace(/^[\d½¼¾⅓⅔⅛\/.\s–-]+/,'').replace(/^ו?(חצי|רבע|שליש)\s+/,'').replace(/^(כוסות|כוס|כפות|כף|כפיות|כפית|שקית|גרם|קילו|חבילת)\s+(ו(חצי|רבע)\s+)?/,'')).join(' · ');
   return `<button class="rc" data-open="${r.id}" style="--c:${c}">${photo?`<div class="ph"><img src="${photo}" alt="" loading="lazy"></div>`:
-  pic?`<div class="ph pic"><img src="${pic}" alt="" loading="lazy"><span class="ttl">${esc(r.title)}</span>${r.ovenTemp?`<span class="tmp">${esc(r.ovenTemp)}</span>`:''}</div>`:
-  `<div class="ph art">${art(r.category)}<span class="ttl">${esc(r.title)}</span>${r.ovenTemp?`<span class="tmp">${esc(r.ovenTemp)}</span>`:''}</div>`}
+  pic?`<div class="ph pic">${isFav(r)?'<span class="fstar">⭐</span>':''}<img src="${pic}" alt="" loading="lazy"><span class="ttl">${esc(r.title)}</span>${r.ovenTemp?`<span class="tmp">${esc(r.ovenTemp)}</span>`:''}</div>`:
+  `<div class="ph art">${isFav(r)?'<span class="fstar">⭐</span>':''}${art(r.category)}<span class="ttl">${esc(r.title)}</span>${r.ovenTemp?`<span class="tmp">${esc(r.ovenTemp)}</span>`:''}</div>`}
   <div class="tx">${photo?`<h3>${esc(r.title)}</h3>`:''}${r.fam&&r.fam.status!=='approved'?`<span class="pend">${r.fam.status==='pending'?'⏳ ממתין לאישור':'✖ נדחה'}</span>`:''}${r.fam&&r.fam.byName&&!mine(r)?`<small class="by">מאת ${esc(r.fam.byName)}</small>`:''}${soc(r).likes||soc(r).comments.length?`<small class="soc">${soc(r).likes?`❤️ ${soc(r).likes}`:''} ${soc(r).comments.length?`💬 ${soc(r).comments.length}`:''}</small>`:''}<small class="pv">${esc(pv)}</small><small>${esc(r.category)}${ni?' · '+ni+' מצרכים':''}${r.bakeTime?' · '+esc(r.bakeTime):''}</small></div></button>`}
 function pickBg(){const b=(settings.bgs||[]).length?settings.bgs:DEFBG;if(window._bgi==null)window._bgi=Math.floor(Math.random()*b.length);return b[window._bgi%b.length]}
 function showSplash(){if(settings.splash===false)return;const el=$('#splash'),bg=pickBg();
@@ -382,12 +403,13 @@ function showSplash(){if(settings.splash===false)return;const el=$('#splash'),bg
 function rBgList(){const b=settings.bgs||[];return b.length?`<div class="thumbs" style="justify-content:flex-start">${b.map((x,i)=>`<div><img src="${x}" alt=""><button type="button" data-rmbg="${i}" aria-label="הסר">×</button></div>`).join('')}</div>`:'<p class="note">כרגע מוצגים הרקעים המובנים של האפליקציה. תמונה שתוסיף כאן תחליף אותם.</p>'}
 function rHome(){
   const q=$('#q').value.trim();
-  const used=['הכל',...CATS.filter(c=>recipes.some(r=>inCat(r,c)))];
-  let list=view.cat==='__pending'?recipes.filter(r=>r.fam&&r.fam.status==='pending'):recipes.filter(r=>(view.cat==='הכל'||inCat(r,view.cat))&&!(r.fam&&r.fam.status==='rejected'&&!mine(r)));
+  const used=['הכל',...favs().filter((f,i)=>i===0?f.ids.length:true).map(f=>'fav:'+f.id),...CATS.filter(c=>recipes.some(r=>inCat(r,c)))];
+  const chipName=c=>c.startsWith('fav:')?(c==='fav:fav'?'⭐ מועדפים':'📁 '+(favs().find(f=>'fav:'+f.id===c)||{name:''}).name):c;
+  let list=view.cat==='__pending'?recipes.filter(r=>r.fam&&r.fam.status==='pending'):recipes.filter(r=>(view.cat==='הכל'||(view.cat.startsWith('fav:')?inFolder(r,view.cat.slice(4)):inCat(r,view.cat)))&&!(r.fam&&r.fam.status==='rejected'&&!mine(r)));
   if(q)list=list.filter(r=>(r.title+' '+r.ingredients.flatMap(g=>g.items).join(' ')).includes(q));
   const pend=famOn()&&settings.fam.role==='admin'?recipes.filter(r=>r.fam&&r.fam.status==='pending').length:0;
   const bg=view.cat!=='הכל'&&CATBG[view.cat]&&!(settings.bgs||[]).length?CATBG[view.cat]:pickBg();
-  main.innerHTML=(!fixedFam()&&!famOn()&&!inClaude()&&server()&&!settings.hideJoin&&view.cat==='הכל'&&!q?`<div class="joinbar"><div><b>🔑 יש לכם קוד משפחה?</b><small>הקישו אותו וקבלו את כל המתכונים של המשפחה</small></div><button class="btn pri" data-fam="join">הקשת קוד</button><button class="x" data-hidejoin aria-label="סגירה">×</button></div>`:'')+(pend&&view.cat!=='__pending'?`<button class="pendbar" data-cat="__pending">🔔 ${pend} מתכונים מחכים לאישור שלך</button>`:'')+(view.cat==='__pending'?`<div class="pendbar" style="cursor:default">מתכונים שמחכים לאישור <button class="btn" data-cat="הכל">חזרה לכל המתכונים</button></div>`:'')+(bg&&!q&&view.cat!=='__pending'?`<div class="banner" style="background-image:url('${bg}')"><span>${view.cat==='הכל'?'מה מכינים היום?':esc(view.cat)}</span></div>`:'')+(recipes.length?`<div class="chips">${used.map(c=>`<button class="chip ${c===view.cat?'on':''}" data-cat="${esc(c)}">${esc(c)}</button>`).join('')}</div>`:'')+
+  main.innerHTML=(!fixedFam()&&!famOn()&&!inClaude()&&server()&&!settings.hideJoin&&view.cat==='הכל'&&!q?`<div class="joinbar"><div><b>🔑 יש לכם קוד משפחה?</b><small>הקישו אותו וקבלו את כל המתכונים של המשפחה</small></div><button class="btn pri" data-fam="join">הקשת קוד</button><button class="x" data-hidejoin aria-label="סגירה">×</button></div>`:'')+(pend&&view.cat!=='__pending'?`<button class="pendbar" data-cat="__pending">🔔 ${pend} מתכונים מחכים לאישור שלך</button>`:'')+(view.cat==='__pending'?`<div class="pendbar" style="cursor:default">מתכונים שמחכים לאישור <button class="btn" data-cat="הכל">חזרה לכל המתכונים</button></div>`:'')+(bg&&!q&&view.cat!=='__pending'?`<div class="banner" style="background-image:url('${bg}')"><span>${view.cat==='הכל'?'מה מכינים היום?':esc(view.cat.startsWith('fav:')?chipName(view.cat):view.cat)}</span></div>`:'')+(recipes.length?`<div class="chips">${used.map(c=>`<button class="chip ${c===view.cat?'on':''}" data-cat="${esc(c)}">${esc(chipName(c))}</button>`).join('')}</div>`:'')+
   (list.length?`<div class="grid">${list.map(card).join('')}</div><div class="tools" style="justify-content:center;margin-top:22px"><button class="btn" data-shareapp>${ICON.share} שיתוף האפליקציה</button></div>`:
   `<div class="empty"><svg viewBox="0 0 120 120"><ellipse cx="60" cy="100" rx="44" ry="8" fill="currentColor" opacity=".15"/><rect x="22" y="48" width="76" height="46" rx="10" fill="#b3203f"/><rect x="22" y="48" width="76" height="14" rx="7" fill="#f4b400"/><path d="M40 48c0-14 8-22 20-22s20 8 20 22" fill="none" stroke="#e0567a" stroke-width="6"/><circle cx="60" cy="24" r="6" fill="#f4b400"/></svg><h2 style="font-size:26px;color:var(--ink)">${q?'לא נמצא מתכון':'עדיין אין מתכונים'}</h2><p>${q?'נסה מילה אחרת':'לחץ על "מתכון חדש" וצלם את המתכון — המערכת תסדר אותו לבד'}</p></div>`);
 }
@@ -405,6 +427,7 @@ function rRecipe(){
   <select class="btn" id="mult" aria-label="הגדלת כמויות">${[[.5,'חצי כמות'],[1,'כמות רגילה'],[1.5,'פי 1.5'],[2,'כמות כפולה'],[3,'פי 3']].map(([v,l])=>`<option value="${v}" ${v===k?'selected':''}>${l}</option>`).join('')}</select>
   ${canEdit(r)?`<button class="btn" data-dish>${ICON.cam} ${picOf(r)?'החלפת תמונה':'הוסף תמונת מאכל'}</button>
   <button class="btn" data-edit>${ICON.edit} עריכה</button>`:''}
+  <button class="btn favb ${isFav(r)?'on':''}" data-fav>${isFav(r)?'⭐ במועדפים':'☆ למועדפים'}</button><button class="btn" data-folder>📁 לתיקייה</button>
   <button class="btn" data-share>${ICON.share} שיתוף</button><button class="btn" data-print>${ICON.print} הדפסה</button></div>
   <div class="${view.cook?'cook':''}">
   ${sec('s1','מצרכים',allIng.length?`יש ${haveN} מתוך ${allIng.length}`:'',allIng.length?`<p class="note" style="margin:6px 0 0">סמן כל מצרך שיש לך בבית</p><div class="prog"><i style="width:${allIng.length?haveN/allIng.length*100:0}%"></i></div>`+
@@ -488,6 +511,7 @@ function rSettings(){
   main.innerHTML=`<button class="back" data-home>${ICON.back} חזרה</button><h2 style="font-size:30px;margin-bottom:14px">הגדרות</h2>
   ${famSection()}
   ${catsSection()}
+  ${foldersSection()}
   ${sec('s1','שיתוף האפליקציה','',`<p class="note">שלחו לחברים ולמשפחה קישור לאפליקציה.</p><div class="tools"><button type="button" class="btn ok" data-shareapp>${ICON.share} שיתוף האפליקציה</button></div>`)}
   ${sec('s3','טיימר — איך להתריע','',`<p class="note">כשהטיימר מסתיים:</p>${[['vib','רטט'],['sound','צליל'],['full','הודעה על כל המסך'],['top','הודעה קטנה למעלה']].map(([k,l])=>`<button type="button" class="ing opt ${A[k]?'have':''}" data-alert="${k}"><span class="box">${A[k]?ICON.check:''}</span><span class="t">${l}</span></button>`).join('')}<div class="tools" style="margin-top:10px"><button type="button" class="btn" data-testalarm>ניסיון התראה</button>${'Notification' in window&&!window.claude?`<button type="button" class="btn" data-notif>${typeof Notification!=='undefined'&&Notification.permission==='granted'?'התראות מערכת מופעלות ✓':'הפעלת התראות מערכת'}</button>`:''}</div><p class="note">רטט עובד באנדרואיד (באייפון לא). כדי שהטיימר יצלצל בזמן, השאירו את האפליקציה פתוחה — המסך יישאר דלוק בזמן שטיימר רץ.</p>`)}
   <form class="f" id="stf">
@@ -724,6 +748,11 @@ document.addEventListener('click',async e=>{
   else if('addcat' in d){const v=$('#newcat').value.trim().slice(0,30);if(!v)return;if(CATS.includes(v)){toast('הקטגוריה כבר קיימת');return}saveCats([...customCats(),v])}
   else if(d.delcat!==undefined){const cc=customCats();if(await ask(`למחוק את הקטגוריה "${cc[+d.delcat]}"? המתכונים עצמם לא יימחקו.`,'מחיקה'))saveCats(cc.filter((_,i)=>i!==+d.delcat))}
   else if('adminout' in d){if(await ask('לצאת ממצב מנהל בטלפון הזה?','יציאה')){settings.fam=null;saveSet();await autoView();rSettings()}}
+  else if('fav' in d){const r=recipes.find(x=>x.id===view.id);toggleFav(r);const y=scrollY;rRecipe();scrollTo(0,y)}
+  else if('folder' in d)folderModal(recipes.find(x=>x.id===view.id));
+  else if('nf2' in d){const v=$('#nf2').value.trim().slice(0,30);if(!v)return;favs().push({id:uid(),name:v,ids:[]});saveSet();rSettings()}
+  else if(d.delf){const f=favs().find(x=>x.id===d.delf);if(await ask(`למחוק את התיקייה "${f.name}"? המתכונים עצמם לא יימחקו.`,'מחיקה')){settings.favs=favs().filter(x=>x.id!==d.delf);if(view.cat==='fav:'+d.delf)view.cat='הכל';saveSet();rSettings()}}
+  else if(d.renf){const f=favs().find(x=>x.id===d.renf);const o=await formModal('שינוי שם תיקייה',[{n:'name',l:'שם חדש',v:f.name}],'שמירה');if(o&&o.name.trim()){f.name=o.name.trim().slice(0,30);saveSet();rSettings()}}
   else if(d.fam)famAct(d.fam);
   else if('faminvite' in d)famInvite();
   else if('famsync' in d)syncFam(false);
@@ -834,6 +863,31 @@ const SEED=[
  ingredients:[G('לבישול בסיר','4 תפוחי אדמה','3 גזר','3 ביצים (לשטוף אותן לפני)'),G('לבלילה','פטרוזיליה / כוסברה קצוצה','7 ביצים','אבקת אפייה'),G('תבלינים','מלח','פלפל שחור','כרכום','כמון','אבקת מרק עוף'),G('לאפייה','חצי כוס שמן')],
  steps:[G('','מבשלים בסיר עם מים את תפוחי האדמה, הגזר ו-3 הביצים.','חותכים הכל לקוביות.','מוסיפים פטרוזיליה / כוסברה קצוצה.','בקערה נפרדת טורפים שבע ביצים עם אבקת אפייה.','מאחדים את התערובות.','מוסיפים תבלינים: מלח, פלפל שחור, כרכום, כמון ומרק עוף.','מחממים תנור ל-180°.','בסיר גבוה עם ידיות שיכול להיכנס לתנור, מחממים על גז באש נמוכה חצי כוס שמן.','שופכים את הבלילה — בלי לערבב.','אחרי 3–5 דקות מעבירים לתנור לשעה.')],
  finish:[G('הגשה','אחרי האפייה סופגים את השמן מלמעלה והופכים על צלחת.')],tips:['צריך סיר גבוה עם ידיות שנכנס לתנור.','לא לערבב אחרי שופכים את הבלילה לשמן.']}
+,
+{id:'s20',title:'אלפחורס',category:'עוגיות',scans:['scans/r21.jpg'],
+ ingredients:[G('לבצק','500 גרם קורנפלור','כוס קמח','כוס סוכר','שקית אבקת אפייה','שקית סוכר וניל','3 ביצים','200 גרם חמאה (להוציא אותה לפני, שתהיה רכה)'),G('למילוי ולגלגול','ריבת חלב','קוקוס')],
+ steps:[G('','במיקסר עם וו גיטרה מערבלים קודם קורנפלור, סוכר, קמח, אבקת אפייה וסוכר וניל.','מתחילים להוסיף את הביצים.','אחרי הביצים מוסיפים את החמאה.','נותנים לבצק לנוח קצת.','מרדדים ו"מחוררים" עיגולים (כך כתוב במקור).','אופים ממש גג 8 דקות — העוגיות צריכות לצאת לבנות לבנות, כמו שלג.')],
+ finish:[G('מילוי','אחר כך ממלאים בריבת חלב (עוגייה–ריבה–עוגייה).','מגלגלים את השוליים בקוקוס.')],tips:['לא לאפות יותר מ-8 דקות — העוגיות צריכות להישאר לבנות.','במתכון לא כתוב חום תנור.']},
+{id:'s21',title:'עוגת תפוזים גבוהה',category:'עוגות',measure:'כוס מידה',ovenTemp:'160–170°',bakeTime:'כשעה ו-20 דקות',scans:['scans/r22.jpg'],
+ ingredients:[G('','7 ביצים L','¾ כוס סוכר (לחלבונים)','¾ כוס סוכר (לחלמונים)','370 גרם קמח','כוס מיץ תפוזים','גרידת תפוז (לא חובה)','שקית אבקת אפייה','כוס שמן'),G('לקישוט','אבקת סוכר')],
+ steps:[G('החלבונים','מפרידים את הביצים.','מקציפים את החלבונים במיקסר עם ¾ כוס סוכר כ-8–10 דקות, עד לקצף יציב.'),G('החלמונים','מקציפים את החלמונים עם ¾ כוס סוכר כ-8–10 דקות.','מוסיפים לאט את השמן ואת גרידת התפוז.','מוסיפים חצי מהמיץ וחצי מהקמח, ואז שוב את החצי השני.','מוסיפים גם את אבקת האפייה.'),G('איחוד ואפייה','בשניים-שלושה שלבים מעבירים את קצף החלבונים לבלילת החלמונים — כל פעם קצת, ולא לערבב יותר מדי, רק עד שאחיד בלי גושים.','שופכים לתבנית עגולה עם רגליים (תבנית שיפון) — לא לשמן!','אופים בתנור שחומם מראש ל-160–170° כשעה ועשרים, או עד שמוכן.')],
+ finish:[G('סיום','מיד כשמוציאים — הופכים את העוגה ומשאירים הפוכה עד שתתקרר.','אחר כך מחלצים מהתבנית ומפזרים מעל אבקת סוכר.')],tips:['לא לפתוח את התנור בכלל בזמן האפייה!','להפוך מיד כשיוצאת, ולא לגעת לפחות שעה.','לא לשמן את התבנית.']},
+{id:'s22',title:'עוגיות שוקולד צ\'יפס',category:'עוגיות',measure:'כוס שתייה קרה',ovenTemp:'180°',bakeTime:'10–12 דקות',scans:['scans/r23.jpg'],
+ ingredients:[G('','100 גרם חמאה רכה','חצי כוס סוכר','חצי כוס סוכר חום (אם אין — אפשר גם רגיל)','ביצה אחת','כפית תמצית וניל','כוס וחצי קמח','חצי כפית אבקת אפייה','קורט מלח','חצי עד כוס שוקולד צ\'יפס')],
+ steps:[G('','מחממים תנור ל-180 מעלות.','מערבבים בקערה חמאה עם הסוכר והסוכר החום עד שנהיה קרמי.','מוסיפים ביצה ותמצית וניל ומערבבים.','מוסיפים קמח, אבקת אפייה ומלח ומערבבים לבצק.','מוסיפים שוקולד צ\'יפס ומערבבים.','יוצרים כדורים קטנים ומניחים על תבנית עם נייר אפייה.','אופים 10–12 דקות, עד שהעוגיות מזהיבות קצת.')],finish:[],tips:[]},
+{id:'s23',title:'רוטב לפיצה מושלם',category:'תוספות',scans:['scans/r24.jpg'],
+ ingredients:[G('','¾ כוס מים חמימים','¼ כוס שמן','3–4 שיני שום (במקור: "3/4 שני שום")','כפית מלח','כף וחצי סוכר','קצת פלפל שחור','שקית תבלין פיצה (לא חובה)','200 גרם רסק עגבניות','5 כפות מיונז')],
+ steps:[G('','שמים הכל לפי הסדר שכתוב ומערבבים בבלנדר.')],finish:[],tips:['מתאים לפיצה ללא התפחה.']},
+{id:'s24',title:'פיצה ללא התפחה',category:'מאפים ולחמים',measure:'כוס חד-פעמית',ovenTemp:'200°',scans:['scans/r25.jpg'],
+ ingredients:[G('לבצק','4 כוסות קמח','1 כף שמרים','2 כפות סוכר','1 כף מלח','כף וחצי שמן','1½ כוסות מים פושרים'),G('לציפוי','רוטב לפיצה','גבינה צהובה מגוררת','תוספות שאוהבים')],
+ steps:[G('','לשים את הבצק במיקסר כ-8–10 דקות.','מרדדים לעיגולים.','מורחים רוטב, מפזרים גבינה צהובה מגוררת ותוספות שאוהבים.','מכניסים לתנור שחומם מראש ל-200 מעלות.','אופים עד שהפיצה שחומה ואפויה טוב.')],finish:[],tips:['לא צריך להתפיח את הבצק.']},
+{id:'s25',title:'פריקסה',category:'מחבת וטיגון',scans:['scans/r26.jpg'],
+ ingredients:[G('','1 קילו קמח','2 כפות שמרים','2 כפות שמן','1 כפית מלח','1 כף סוכר','2/3 כוס מים (כמה שהבצק דורש)'),G('לטיגון','שמן')],
+ steps:[G('','מערבבים את המצרכים.','לשים את הבצק ומשאירים להתפיח כשעה.','מחלקים לכדורים על משטח מקומח.','מכסים ומתפיחים עוד 20 דקות.','מטגנים בשמן.')],
+ finish:[G('הגשה','ממלאים בתוספות שאוהבים.')],tips:[]},
+{id:'s26',title:'עוגיות שקדים עם שוקולד צ\'יפס',category:'עוגיות',tags:['שבת וחג'],intro:'כשר לפסח',measure:'כוס שתייה קרה',ovenTemp:'180°',scans:['scans/r27.jpg'],
+ ingredients:[G('','2 כוסות קמח תפוחי אדמה','חצי כוס סוכר','¾ כוס קמח שקדים','¾ כוס שמן','ביצה','¾ כוס שוקולד צ\'יפס (אפשר יותר)')],
+ steps:[G('','מערבבים הכל יחד.','יוצרים כדורים ומועכים אותם מעט.','אופים בתנור שחומם מראש ל-180° עד שמשחימים מעט.')],finish:[],tips:[]}
 ].map(r=>({servings:'',time:'',ovenTemp:'',bakeTime:'',intro:'',measure:'',...r,have:{},done:{},created:0,seed:true}));
 
 (async()=>{
@@ -841,6 +895,7 @@ const SEED=[
   const s=await dbGet('settings');if(s)settings={...settings,...s};if(settings.name==='המתכונים שלי')settings.name='העוגות של החיים';
   const r=await dbGet('recipes');recipes=Array.isArray(r)?r:[];
   if((settings.seedV||0)<1){recipes=recipes.filter(x=>x.id!=='sample1');const ids=new Set(recipes.map(x=>x.id));recipes=[...recipes,...SEED.filter(x=>!ids.has(x.id))];settings.seedV=1;saveSet();saveAll()}
+  if((settings.seedV||0)<2){const ids=new Set(recipes.map(x=>x.id));recipes=[...recipes,...SEED.filter(x=>+x.id.slice(1)>=20&&!ids.has(x.id))];settings.seedV=2;saveSet();saveAll()}
   try{social=(await dbGet('social'))||{}}catch(e){}refreshCats();
   setTitle();go({v:'home'});showSplash();
   if(/^#join-[A-Z0-9]+$/i.test(location.hash)){pendingJoin=location.hash.slice(6).toUpperCase();history.replaceState(null,'',location.pathname);if(!famOn())setTimeout(()=>famAct('join'),1200)}
