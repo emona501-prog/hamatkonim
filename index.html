@@ -276,7 +276,7 @@ async function aiParse(images){
   if(settings.gkey){
     const parts=[{text:PROMPT},...images.map(d=>({inline_data:{mime_type:'image/jpeg',data:d.split(',')[1]}}))];
     const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(settings.gmodel||'gemini-2.5-flash')}:generateContent?key=${encodeURIComponent(settings.gkey)}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts}],generationConfig:{responseMimeType:'application/json',temperature:.2}})});
-    if(!r.ok)throw new Error('שגיאה מהשרת ('+r.status+') — בדוק את המפתח בהגדרות');
+    if(!r.ok){let m='';try{m=(await r.json()).error.message}catch(e){}throw new Error(/API key not valid|API_KEY_INVALID/i.test(m)?'המפתח האישי בהגדרות לא תקין — מחקו אותו מהשדה "מפתח Gemini" בהגדרות':'שגיאה מ-Gemini ('+r.status+'): '+(m||'בדוק את המפתח בהגדרות'))}
     const j=await r.json();return parseJSON(j.candidates?.[0]?.content?.parts?.map(p=>p.text).join('')||'{}');
   }
   throw new Error('NOAI');
@@ -288,7 +288,7 @@ async function aiText(text){
   if(sampleFn){try{j=await sampleFn.json(prompt,{modelTier:'complex'})}catch(e){if(e&&e.code==='not_granted')throw new Error('לא ניתן אישור לשימוש ב-Claude');const r=await sampleFn(prompt,{modelTier:'complex'});j=parseJSON(r.text)}j=parseJSON(j)}
   else if(famOn()&&settings.fam.hasAi){const r=await api('parse',{prompt,sc:(settings.fam&&settings.fam.unlocked)?SUBMIT_CODE:'',model:settings.gmodel});j=parseJSON(r.text||'{}')}
   else if(settings.gkey){const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(settings.gmodel||'gemini-2.5-flash')}:generateContent?key=${encodeURIComponent(settings.gkey)}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{responseMimeType:'application/json',temperature:.2}})});
-    if(!r.ok)throw new Error('שגיאה מהשרת ('+r.status+') — בדוק את המפתח בהגדרות');const x=await r.json();j=parseJSON(x.candidates?.[0]?.content?.parts?.map(p=>p.text).join('')||'{}')}
+    if(!r.ok){let m='';try{m=(await r.json()).error.message}catch(e){}throw new Error(/API key not valid|API_KEY_INVALID/i.test(m)?'המפתח האישי בהגדרות לא תקין — מחקו אותו מהשדה "מפתח Gemini" בהגדרות':'שגיאה מ-Gemini ('+r.status+'): '+(m||'בדוק את המפתח בהגדרות'))}const x=await r.json();j=parseJSON(x.candidates?.[0]?.content?.parts?.map(p=>p.text).join('')||'{}')}
   else throw new Error('NOAI');
   return Array.isArray(j)?j:(j.recipes||[j]);
 }
