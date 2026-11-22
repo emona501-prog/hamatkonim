@@ -87,6 +87,7 @@ details.orig summary{padding:14px 18px;font-weight:700;cursor:pointer;color:var(
 .fstar{position:absolute;top:6px;inset-inline-end:8px;font-size:22px;z-index:2;filter:drop-shadow(0 1px 3px #0008)}
 .rc .ph.art{position:relative}
 .favb.on{background:#fff4cc;border-color:var(--sun);color:#7a5600}
+.aibox{background:var(--bg);border:2px solid var(--line);border-radius:14px;padding:12px;margin:10px 0}
 .pendbar{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;background:var(--sun);color:#2a1418;font:700 18px Heebo;padding:14px 16px;border-radius:16px;margin-bottom:14px;text-align:start}
 .rc .pend{display:inline-block;background:var(--sun);color:#2a1418;font:700 13px Heebo;padding:2px 8px;border-radius:99px;margin-bottom:4px}
 .rc .by{display:block;color:var(--soft);font-size:13px}
@@ -271,6 +272,7 @@ async function aiParse(images){
     catch(e){if(e&&e.code==='not_granted')throw new Error('לא ניתן אישור לשימוש ב-Claude');const r=await sampleFn(PROMPT,{images:blobs,modelTier:'complex'});out=parseJSON(r.text)}
     return parseJSON(out);
   }
+  if(famOn()&&settings.fam.hasAi){const j=await api('parse',{prompt:PROMPT,images:images.map(d=>d.split(',')[1]),sc:(settings.fam&&settings.fam.unlocked)?SUBMIT_CODE:'',model:settings.gmodel});return parseJSON(j.text||'{}')}
   if(settings.gkey){
     const parts=[{text:PROMPT},...images.map(d=>({inline_data:{mime_type:'image/jpeg',data:d.split(',')[1]}}))];
     const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(settings.gmodel||'gemini-2.5-flash')}:generateContent?key=${encodeURIComponent(settings.gkey)}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts}],generationConfig:{responseMimeType:'application/json',temperature:.2}})});
@@ -284,6 +286,7 @@ let PROMPT_T='';const PROMPT_T0=PROMPT0.replace('בתמונות מצורף מת�
 async function aiText(text){
   const prompt=PROMPT_T+text.slice(0,30000);let j;
   if(sampleFn){try{j=await sampleFn.json(prompt,{modelTier:'complex'})}catch(e){if(e&&e.code==='not_granted')throw new Error('לא ניתן אישור לשימוש ב-Claude');const r=await sampleFn(prompt,{modelTier:'complex'});j=parseJSON(r.text)}j=parseJSON(j)}
+  else if(famOn()&&settings.fam.hasAi){const r=await api('parse',{prompt,sc:(settings.fam&&settings.fam.unlocked)?SUBMIT_CODE:'',model:settings.gmodel});j=parseJSON(r.text||'{}')}
   else if(settings.gkey){const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(settings.gmodel||'gemini-2.5-flash')}:generateContent?key=${encodeURIComponent(settings.gkey)}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{responseMimeType:'application/json',temperature:.2}})});
     if(!r.ok)throw new Error('שגיאה מהשרת ('+r.status+') — בדוק את המפתח בהגדרות');const x=await r.json();j=parseJSON(x.candidates?.[0]?.content?.parts?.map(p=>p.text).join('')||'{}')}
   else throw new Error('NOAI');
@@ -452,7 +455,7 @@ function rAdd(){
   ${pending.length?`<div class="tools" style="margin-top:16px;justify-content:center"><button class="btn pri" data-parse style="font-size:20px;padding:14px 28px">✨ פענח את המתכון</button></div>`:''}
   <div class="drop" style="margin-top:14px;border-style:solid;border-width:2px"><h3 style="font-size:22px">יש לך קובץ?</h3><p style="margin:0 0 12px">קובץ Word או PDF (אפשר גם כמה מתכונים בקובץ אחד) — המערכת תחלץ את הטקסט ותסדר.</p><button class="btn pri" data-doc>העלאת קובץ Word / PDF</button></div>
   <div class="tools" style="margin-top:16px;justify-content:center"><button class="btn" data-manual>או הקלד מתכון ידנית</button><button class="btn" data-paste>הדבקת טקסט של מתכון</button></div>
-  ${!(sampleFn&&sampleImg)&&!settings.gkey?`<p class="note" style="text-align:center">לפענוח תמונות מחוץ ל-Claude צריך להזין מפתח Gemini בהגדרות. קבצי Word ו-PDF יסודרו גם בלי, לפי הכותרות שבהם.</p>`:''}`;
+  ${!(sampleFn&&sampleImg)&&!settings.gkey&&!(famOn()&&settings.fam.hasAi)?`<p class="note" style="text-align:center">לפענוח תמונות מחוץ ל-Claude צריך להזין מפתח Gemini בהגדרות. קבצי Word ו-PDF יסודרו גם בלי, לפי הכותרות שבהם.</p>`:''}`;
 }
 async function doParse(){
   const imgs=pending.slice(),target=view.into;
@@ -632,7 +635,7 @@ async function syncFam(quiet=true){if(!famOn()||syncing)return;syncing=true;
       if(s.deleted||(s.status==='rejected'&&s.by!==settings.fam.memberId)||!s.data){if(i>=0){recipes.splice(i,1);ch++}return}
       const old=i>=0?recipes[i]:null;const r={...s.data,id:s.id,have:old?.have||{},done:old?.done||{},fam:{status:s.status,by:s.by,byName:s.byName}};
       if(i>=0)recipes[i]=r;else recipes.unshift(r);ch++});
-    settings.fam.since=j.now;if(j.social){social=j.social;dbSet('social',social)}if(j.cats){settings.fam.cats=j.cats;refreshCats()}settings.fam.pending=j.pending||0;settings.fam.familyName=j.familyName;settings.fam.role=j.role;saveSet();
+    settings.fam.since=j.now;settings.fam.hasAi=!!j.hasAi;if(j.social){social=j.social;dbSet('social',social)}if(j.cats){settings.fam.cats=j.cats;refreshCats()}settings.fam.pending=j.pending||0;settings.fam.familyName=j.familyName;settings.fam.role=j.role;saveSet();
     if(ch||j.social){if(ch)saveAll();if(view.v==='home'||view.v==='recipe'){const y=scrollY;render();scrollTo(0,y)}}
     if(!quiet)toast(ch?`עודכנו ${ch} מתכונים`:'הכל מעודכן')}
   catch(e){if(!quiet)toast(e.message)}finally{syncing=false}}
@@ -685,7 +688,7 @@ async function famMembers(){try{const j=await api('members');const m=document.cr
   document.body.append(m);m.onclick=e=>{if(e.target===m||e.target.closest('[data-n]'))m.remove()}}catch(e){toast(e.message)}}
 function famSection(){const f=settings.fam;
   if(fixedFam()&&!inClaude()){
-    if(f&&f.role==='admin')return sec('s1','ניהול — '+esc(f.familyName||''),'מנהל/ת',`<p style="margin:4px 0">מחובר/ת כמנהל/ת בתור <b>${esc(f.name||'')}</b>. קוד שליחת מתכונים לבני המשפחה: <b dir="ltr">${SUBMIT_CODE}</b></p>
+    if(f&&f.role==='admin')return sec('s1','ניהול — '+esc(f.familyName||''),'מנהל/ת',`<p style="margin:4px 0">מחובר/ת כמנהל/ת בתור <b>${esc(f.name||'')}</b>. קוד שליחת מתכונים לבני המשפחה: <b dir="ltr">${SUBMIT_CODE}</b></p><div class="aibox"><b>🤖 פענוח צילומים לכל המשפחה</b> ${f.hasAi?'<span class="pend" style="background:var(--mint);color:#fff">פעיל ✓</span>':'<span class="note">(לא פעיל)</span>'}<p class="note" style="margin:4px 0">מדביקים כאן את מפתח Gemini פעם אחת. הוא נשמר בשרת בלבד — לא נשלח לאף טלפון, ולא נשמר כאן.</p><div class="tools" style="margin:0"><input type="password" id="srvkey" dir="ltr" placeholder="AIza..." autocomplete="off" style="flex:1;min-width:160px"><button type="button" class="btn pri" data-setkey>שמירה בשרת</button>${f.hasAi?'<button type="button" class="btn" data-delkey style="color:var(--brand2)">הסרה</button>':''}</div></div>
       <div class="tools"><button type="button" class="btn" data-famsync>סנכרון עכשיו</button><button type="button" class="btn" data-fammembers>מי משתמש</button><button type="button" class="btn" data-famupload>העלאת המתכונים שבטלפון לכולם</button><button type="button" class="btn" data-adminout style="color:var(--brand2)">יציאה ממצב מנהל</button></div>`);
     return sec('s1','המתכונים המשפחתיים','',`<p class="note">כולם רואים את המתכונים המשפחתיים. כדי לשלוח מתכון חדש לוחצים "מתכון חדש" ומקישים את הקוד שקיבלתם. המנהלת מאשרת לפני שהוא מופיע אצל כולם.</p>${f&&f.name?`<p style="margin:4px 0">מחובר/ת בתור <b>${esc(f.name)}</b>${f.unlocked?' · יכול/ה לשלוח מתכונים ✓':''}</p>`:''}<div class="tools"><button type="button" class="btn" data-famsync>סנכרון עכשיו</button><button type="button" class="btn" data-fam="admin">כניסת מנהל/ת</button></div>`)}
   if(inClaude())return sec('s1','משפחה — שיתוף מתכונים','',`<p class="note">השיתוף המשפחתי עובד באפליקציה המותקנת מהקישור (${APP_URL}), לא בתוך Claude.</p>`);
@@ -759,6 +762,7 @@ document.addEventListener('click',async e=>{
   else if(d.delc){if(await ask('למחוק את התגובה?','מחיקה')){const r=recipes.find(x=>x.id===view.id);socialAct('delComment',{cid:d.delc},()=>{const s=soc(r);s.comments=s.comments.filter(c=>c.cid!==d.delc)})}}
   else if('addcat' in d){const v=$('#newcat').value.trim().slice(0,30);if(!v)return;if(CATS.includes(v)){toast('הקטגוריה כבר קיימת');return}saveCats([...customCats(),v])}
   else if(d.delcat!==undefined){const cc=customCats();if(await ask(`למחוק את הקטגוריה "${cc[+d.delcat]}"? המתכונים עצמם לא יימחקו.`,'מחיקה'))saveCats(cc.filter((_,i)=>i!==+d.delcat))}
+  else if('setkey' in d||'delkey' in d){const k='setkey' in d?$('#srvkey').value.trim():'';if('setkey' in d&&!k){toast('הדבק מפתח');return}if('delkey' in d&&!await ask('להסיר את מפתח הפענוח מהשרת?','הסרה'))return;try{const j=await api('setKey',{key:k});settings.fam.hasAi=j.hasAi;saveSet();toast(j.hasAi?'נשמר בשרת ✓ — עכשיו כל המשפחה יכולה לפענח צילומים':'הוסר');rSettings()}catch(err){toast(err.message)}}
   else if('adminout' in d){if(await ask('לצאת ממצב מנהל בטלפון הזה?','יציאה')){settings.fam=null;saveSet();await autoView();rSettings()}}
   else if('fav' in d){const r=recipes.find(x=>x.id===view.id);toggleFav(r);const y=scrollY;rRecipe();scrollTo(0,y)}
   else if('folder' in d)folderModal(recipes.find(x=>x.id===view.id));
